@@ -19,11 +19,15 @@ let pool: mysql.Pool | null = null;
 let pgClient: postgres.Sql | null = null;
 
 if (usePostgres && databaseUrl) {
+  const isLocal =
+    databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1");
   pgClient = postgres(databaseUrl, {
     max: 10,
-    ssl: { rejectUnauthorized: false },
+    ssl: isLocal ? false : { rejectUnauthorized: false },
   });
-  console.log(`🚀 PostgreSQL conectado (${isDev ? "dev" : "prod"})`);
+  console.log(
+    `🚀 PostgreSQL conectado (${isDev ? "dev" : "prod"})${isLocal ? " (sin SSL)" : ""}`,
+  );
 } else {
   pool = mysql.createPool({
     host: process.env.DB_HOST || "localhost",
