@@ -35,19 +35,19 @@ export async function GET() {
     const stockBajo = await query(
       `SELECT p.nombre, v.stock FROM productos p
        JOIN variantes_producto v ON p.id = v.producto_id
-       WHERE v.stock < 10 AND v.activa = 1
+       WHERE v.stock < 10 AND v.activa = TRUE
        ORDER BY v.stock ASC LIMIT 5`,
     );
 
     const ventasMensuales = await query(
-      `SELECT DATE_FORMAT(creado_en, '%Y-%m') as mes,
-              DATE_FORMAT(creado_en, '%b %Y') as mes_label,
+      `SELECT TO_CHAR(creado_en, 'YYYY-MM') as mes,
+              TO_CHAR(creado_en, 'Mon YYYY') as mes_label,
               COUNT(*) as total_pedidos,
               SUM(total) as total_ventas
        FROM pedidos
-       WHERE creado_en >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+       WHERE creado_en >= NOW() - INTERVAL '6 months'
        AND estado != 'cancelado'
-       GROUP BY DATE_FORMAT(creado_en, '%Y-%m')
+       GROUP BY TO_CHAR(creado_en, 'YYYY-MM')
        ORDER BY mes ASC`,
     );
 
@@ -57,7 +57,7 @@ export async function GET() {
        JOIN variantes_producto v ON ip.variante_id = v.id
        JOIN productos p ON v.producto_id = p.id
        JOIN pedidos ped ON ip.pedido_id = ped.id
-       WHERE ped.creado_en >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+       WHERE ped.creado_en >= NOW() - INTERVAL '30 days'
        AND ped.estado != 'cancelado'
        GROUP BY p.id, p.nombre
        ORDER BY total_vendido DESC LIMIT 5`,

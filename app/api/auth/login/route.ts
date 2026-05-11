@@ -19,19 +19,19 @@ export async function POST(req: NextRequest) {
     if (!correo || !contrasena) {
       return NextResponse.json(
         { error: "Por favor, completa todos los campos." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const user = await queryOne<UserRow>(
-      "SELECT id, nombre, apellido, correo, contrasena_hash, rol FROM usuarios WHERE correo = ? AND activo = 1",
-      [correo]
+      "SELECT id, nombre, apellido, correo, contrasena_hash, rol FROM usuarios WHERE correo = ? AND activo = TRUE",
+      [correo],
     );
 
     if (!user || !bcrypt.compareSync(contrasena, user.contrasena_hash)) {
       return NextResponse.json(
         { error: "Correo o contraseña incorrectos." },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -56,9 +56,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { error: "Error del servidor." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error del servidor." }, { status: 500 });
   }
 }

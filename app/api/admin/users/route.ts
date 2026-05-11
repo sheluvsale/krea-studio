@@ -11,7 +11,7 @@ export async function GET() {
   try {
     const usuarios = await query(
       `SELECT id, nombre, apellido, correo, telefono, rol, activo, creado_en
-       FROM usuarios ORDER BY creado_en DESC`
+       FROM usuarios ORDER BY creado_en DESC`,
     );
     return NextResponse.json({ usuarios });
   } catch (error) {
@@ -28,13 +28,17 @@ export async function PUT(req: NextRequest) {
 
   try {
     const { id, rol, activo } = await req.json();
-    await execute(
-      `UPDATE usuarios SET rol = ?, activo = ? WHERE id = ?`,
-      [rol, activo ? 1 : 0, id]
-    );
+    await execute(`UPDATE usuarios SET rol = ?, activo = ? WHERE id = ?`, [
+      rol,
+      activo ? true : false,
+      id,
+    ]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Update user error:", error);
-    return NextResponse.json({ error: "Error al actualizar." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al actualizar." },
+      { status: 500 },
+    );
   }
 }

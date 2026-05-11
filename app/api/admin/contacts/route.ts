@@ -11,7 +11,7 @@ export async function GET() {
   try {
     const mensajes = await query(
       `SELECT id, nombre, email, asunto, mensaje, leido, creado_en
-       FROM mensajes_contacto ORDER BY creado_en DESC`
+       FROM mensajes_contacto ORDER BY creado_en DESC`,
     );
     return NextResponse.json({ mensajes });
   } catch (error) {
@@ -28,13 +28,16 @@ export async function PUT(req: NextRequest) {
 
   try {
     const { id, leido } = await req.json();
-    await execute(
-      `UPDATE mensajes_contacto SET leido = ? WHERE id = ?`,
-      [leido ? 1 : 0, id]
-    );
+    await execute(`UPDATE mensajes_contacto SET leido = ? WHERE id = ?`, [
+      leido ? true : false,
+      id,
+    ]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Update contact error:", error);
-    return NextResponse.json({ error: "Error al actualizar." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al actualizar." },
+      { status: 500 },
+    );
   }
 }

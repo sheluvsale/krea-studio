@@ -46,14 +46,14 @@ export async function POST(req: NextRequest) {
         body.precio,
         body.categoria_id || null,
         user.userId,
-        body.destacado ? 1 : 0,
+        body.destacado ? true : false,
         body.sku || null,
       ],
     );
 
     if (body.stock && result.insertId) {
       await execute(
-        "INSERT INTO variantes_producto (producto_id, stock, activa) VALUES (?, ?, 1)",
+        "INSERT INTO variantes_producto (producto_id, stock, activa) VALUES (?, ?, TRUE)",
         [result.insertId, body.stock],
       );
     }

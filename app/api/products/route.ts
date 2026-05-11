@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const params: (string | number)[] = [];
 
     if (q) {
-      sql += " AND (p.nombre LIKE ? OR p.descripcion LIKE ?)";
+      sql += " AND (p.nombre ILIKE ? OR p.descripcion ILIKE ?)";
       params.push(`%${q}%`, `%${q}%`);
     }
     if (categoria) {
@@ -41,10 +41,10 @@ export async function GET(req: NextRequest) {
       params.push(Number(precioMax));
     }
     if (destacados === "1") {
-      sql += " AND p.destacado = 1";
+      sql += " AND p.destacado = TRUE";
     }
     if (nuevos === "1") {
-      sql += " AND p.nuevo = 1";
+      sql += " AND p.nuevo = TRUE";
     }
 
     switch (orden) {
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     if (productoIds.length > 0) {
       const placeholders = productoIds.map(() => "?").join(",");
       const tallasResult = await query(
-        `SELECT v.producto_id, GROUP_CONCAT(DISTINCT av.valor SEPARATOR ',') as tallas
+        `SELECT v.producto_id, STRING_AGG(DISTINCT av.valor, ',') as tallas
          FROM variantes_producto v
          JOIN atributos_variante av ON av.variante_id = v.id
          WHERE v.producto_id IN (${placeholders}) AND av.valor IN ('XS','S','M','L','XL','XXL') AND v.stock > 0

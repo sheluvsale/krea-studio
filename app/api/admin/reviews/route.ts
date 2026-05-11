@@ -15,7 +15,7 @@ export async function GET() {
        FROM reseñas r
        JOIN productos p ON r.producto_id = p.id
        JOIN usuarios u ON r.usuario_id = u.id
-       ORDER BY r.creado_en DESC`
+       ORDER BY r.creado_en DESC`,
     );
     return NextResponse.json({ resenas });
   } catch (error) {
@@ -32,10 +32,16 @@ export async function PUT(req: NextRequest) {
 
   try {
     const { id, aprobada } = await req.json();
-    await execute("UPDATE reseñas SET aprobada = ? WHERE id = ?", [aprobada ? 1 : 0, id]);
+    await execute("UPDATE reseñas SET aprobada = ? WHERE id = ?", [
+      aprobada ? true : false,
+      id,
+    ]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Update review error:", error);
-    return NextResponse.json({ error: "Error al actualizar." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al actualizar." },
+      { status: 500 },
+    );
   }
 }

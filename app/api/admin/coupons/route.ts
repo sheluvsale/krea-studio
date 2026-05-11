@@ -10,7 +10,7 @@ export async function GET() {
 
   try {
     const cupones = await query(
-      "SELECT id, codigo, tipo_descuento, valor, minimo_compra, limite_usos, usos_actuales, fecha_fin, activo FROM cupones ORDER BY creado_en DESC"
+      "SELECT id, codigo, tipo_descuento, valor, minimo_compra, limite_usos, usos_actuales, fecha_fin, activo FROM cupones ORDER BY creado_en DESC",
     );
     return NextResponse.json({ cupones });
   } catch (error) {
@@ -29,8 +29,15 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     await execute(
       `INSERT INTO cupones (codigo, tipo_descuento, valor, minimo_compra, limite_usos, fecha_fin, activo)
-       VALUES (?, ?, ?, ?, ?, ?, 1)`,
-      [body.codigo, body.tipo_descuento, body.valor, body.minimo_compra, body.limite_usos, body.fecha_fin || null]
+       VALUES (?, ?, ?, ?, ?, ?, TRUE)`,
+      [
+        body.codigo,
+        body.tipo_descuento,
+        body.valor,
+        body.minimo_compra,
+        body.limite_usos,
+        body.fecha_fin || null,
+      ],
     );
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -47,10 +54,16 @@ export async function PUT(req: NextRequest) {
 
   try {
     const { id, activo } = await req.json();
-    await execute("UPDATE cupones SET activo = ? WHERE id = ?", [activo ? 1 : 0, id]);
+    await execute("UPDATE cupones SET activo = ? WHERE id = ?", [
+      activo ? true : false,
+      id,
+    ]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Update coupon error:", error);
-    return NextResponse.json({ error: "Error al actualizar." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al actualizar." },
+      { status: 500 },
+    );
   }
 }

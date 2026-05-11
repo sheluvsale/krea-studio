@@ -65,12 +65,21 @@ export async function queryOne<T = Record<string, unknown>>(
   return rows[0] || null;
 }
 
+function addReturningId(sql: string): string {
+  const trimmed = sql.trim();
+  if (/^INSERT\s+INTO/i.test(trimmed) && !/RETURNING\s+\w+$/i.test(trimmed)) {
+    return trimmed + " RETURNING id";
+  }
+  return trimmed;
+}
+
 export async function execute(
   sql: string,
   params?: (string | number | boolean | null)[],
 ): Promise<{ insertId: number; affectedRows: number }> {
   if (usePostgres && pgClient) {
-    const result = await pgClient.unsafe(toPgSql(sql), params ?? []);
+    const pgSql = addReturningId(toPgSql(sql));
+    const result = await pgClient.unsafe(pgSql, params ?? []);
     return {
       insertId: (result[0] as { id?: number })?.id ?? 0,
       affectedRows: (result as unknown as { count?: number }).count ?? 0,

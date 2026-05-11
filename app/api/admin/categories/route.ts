@@ -10,7 +10,7 @@ export async function GET() {
 
   try {
     const categorias = await query(
-      "SELECT id, nombre, slug, padre_id, orden, activa FROM categorias ORDER BY orden, nombre"
+      "SELECT id, nombre, slug, padre_id, orden, activa FROM categorias ORDER BY orden, nombre",
     );
     return NextResponse.json({ categorias });
   } catch (error) {
@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
   try {
     const { nombre, slug } = await req.json();
     const result = await execute(
-      "INSERT INTO categorias (nombre, slug, activa) VALUES (?, ?, 1)",
-      [nombre, slug]
+      "INSERT INTO categorias (nombre, slug, activa) VALUES (?, ?, TRUE)",
+      [nombre, slug],
     );
     return NextResponse.json({ success: true, id: result.insertId });
   } catch (error) {
@@ -51,7 +51,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Falta ID." }, { status: 400 });
     }
 
-    await execute("UPDATE productos SET categoria_id = NULL WHERE categoria_id = ?", [id]);
+    await execute(
+      "UPDATE productos SET categoria_id = NULL WHERE categoria_id = ?",
+      [id],
+    );
     await execute("DELETE FROM categorias WHERE id = ?", [id]);
 
     return NextResponse.json({ success: true });
