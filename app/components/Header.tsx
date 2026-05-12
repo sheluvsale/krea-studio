@@ -76,7 +76,7 @@ export default function Header() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 w-full z-[9999] transition-all duration-300 ${
+        className={`${pathname === "/dashboard" ? "relative" : "fixed top-0 left-0 w-full"} z-[9999] transition-all duration-300 ${
           scrolled
             ? "bg-[rgba(10,10,10,0.65)] backdrop-blur-xl backdrop-saturate-[180%] shadow-[0_4px_30px_rgba(0,0,0,0.3)]"
             : "bg-transparent"
@@ -87,8 +87,8 @@ export default function Header() {
             <Image
               src="/images/logo/Krea-blanco-sinfondo.png"
               alt="Krea Streetwear"
-              width={120}
-              height={40}
+              width={180}
+              height={60}
               priority
               className="h-[90px] w-auto block transition-transform duration-300 hover:scale-105"
             />
@@ -96,7 +96,7 @@ export default function Header() {
 
           {/* Mobile hamburger */}
           <button
-            className="lg:hidden flex flex-col gap-[6px] p-2 bg-transparent border-none"
+            className="lg:hidden flex flex-col gap-[6px] p-2 bg-transparent border-none z-[10001]"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Toggle menu"
           >
@@ -111,14 +111,8 @@ export default function Header() {
             />
           </button>
 
-          {/* Desktop + Mobile Nav */}
-          <ul
-            className={`flex list-none gap-10 items-center transition-all duration-500 lg:flex ${
-              menuOpen
-                ? "fixed inset-0 flex-col justify-center items-center bg-[#0a0a0a] z-[9998] gap-8"
-                : "hidden lg:flex"
-            }`}
-          >
+          {/* Desktop Nav */}
+          <ul className="hidden lg:flex list-none gap-10 items-center">
             <li className="relative">
               <Link
                 href="/"
@@ -285,12 +279,137 @@ export default function Header() {
         </nav>
       </header>
 
-      {/* Mobile overlay */}
+      {/* Mobile Menu */}
       {menuOpen && (
-        <div
-          className="fixed inset-0 bg-black/30 z-[9997] lg:hidden"
-          onClick={() => setMenuOpen(false)}
-        />
+        <div className="fixed inset-0 z-[10000] lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
+            onClick={() => setMenuOpen(false)}
+          />
+          {/* Menu Content */}
+          <div className="absolute inset-y-0 right-0 w-[80%] max-w-[400px] bg-[#0a0a0a] shadow-2xl animate-in slide-in-from-right duration-300 ease-out">
+            <ul className="flex flex-col justify-center items-center h-full gap-8 p-8">
+              <li className="relative">
+                <Link
+                  href="/"
+                  className={linkClass("/")}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Inicio
+                </Link>
+              </li>
+              <li className="relative">
+                <Link
+                  href="/productos"
+                  className={linkClass("/productos")}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Productos
+                </Link>
+              </li>
+              <li className="relative">
+                <Link
+                  href="/nosotros"
+                  className={linkClass("/nosotros")}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Nosotros
+                </Link>
+              </li>
+              <li className="relative">
+                <Link
+                  href="/contacto"
+                  className={linkClass("/contacto")}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Contacto
+                </Link>
+              </li>
+
+              {user ? (
+                user.rol === "admin" ? (
+                  <>
+                    <li className="relative">
+                      <Link
+                        href="/admin"
+                        target="_blank"
+                        className={navLinkBase}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Panel Admin
+                      </Link>
+                    </li>
+                    <li className="relative">
+                      <button
+                        onClick={handleLogout}
+                        className={`${navLinkBase} bg-transparent border-none`}
+                      >
+                        Cerrar Sesión
+                      </button>
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li className="relative">
+                      <Link
+                        href="/dashboard"
+                        className={navLinkBase}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        {user.nombre}
+                      </Link>
+                    </li>
+                    <li className="relative">
+                      <Link
+                        href="/designer"
+                        target="_blank"
+                        rel="noopener"
+                        className={navLinkBase}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Crear Ropa
+                      </Link>
+                    </li>
+                    <li className="relative">
+                      <button
+                        onClick={handleLogout}
+                        className={`${navLinkBase} bg-transparent border-none`}
+                      >
+                        Cerrar Sesión
+                      </button>
+                    </li>
+                  </>
+                )
+              ) : (
+                <li className="relative">
+                  <Link
+                    href="/login"
+                    className={linkClass("/login")}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Iniciar Sesión
+                  </Link>
+                </li>
+              )}
+
+              <li className="relative">
+                <Link
+                  href="/cart"
+                  className={linkClass("/cart")}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Carrito
+                  {cartCount > 0 && (
+                    <span className="inline-flex items-center justify-center w-5 h-5 bg-[#ffffff] text-[#0a0a0a] text-[0.65rem] font-bold rounded-full ml-1.5">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
       )}
     </>
   );

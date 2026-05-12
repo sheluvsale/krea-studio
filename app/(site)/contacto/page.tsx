@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import MobileWarning from "@/components/MobileWarning";
 
 export default function ContactoPage() {
   const [form, setForm] = useState({

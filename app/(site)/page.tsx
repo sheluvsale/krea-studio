@@ -39,7 +39,7 @@ export default function HomePage() {
               href="/nosotros"
               className="inline-block border border-[#888] text-[#888] px-8 py-3 text-[0.75rem] uppercase tracking-[2px] font-[family-name:var(--font-heading)] transition-all duration-300 hover:border-white hover:text-white"
             >
-              Conócenos
+              Conoce Krea
             </MagneticButton>
           </div>
         </div>

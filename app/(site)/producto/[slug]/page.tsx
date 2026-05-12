@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, use } from "react";
+import MobileWarning from "@/components/MobileWarning";
 
 interface Producto {
   id: number;

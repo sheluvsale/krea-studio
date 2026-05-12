@@ -18,11 +18,13 @@ import {
   Palette,
   LogOut,
   Menu,
+  Search,
   TrendingUp,
   DollarSign,
   AlertTriangle,
   ArrowUpRight,
 } from "lucide-react";
+import MobileWarning from "@/components/MobileWarning";
 
 interface AdminData {
   nombre: string;
@@ -52,6 +54,12 @@ interface AdminData {
     total_pedidos: number;
     total_ventas: number;
   }[];
+  tendencias?: {
+    productos: string;
+    pedidos: string;
+    usuarios: string;
+    ingresos: string;
+  };
 }
 
 type TabKey =
@@ -89,6 +97,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>("resumen");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     document.documentElement.classList.add("no-custom-cursor");
@@ -139,416 +148,453 @@ export default function AdminDashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#080808] text-[#e5e5e5] flex">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <>
+      <MobileWarning />
+      <div className="min-h-screen bg-[#080808] text-[#e5e5e5] flex">
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-[#0c0c0c] border-r border-[#1f1f1f] flex flex-col transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-[#1f1f1f]">
-          <Link href="/" className="hover:opacity-80 transition-opacity">
-            <Image
-              src="/images/logo/Krea-blanco-sinfondo.png"
-              alt="Krea"
-              width={100}
-              height={36}
-              className="h-11 w-auto"
-              priority
-            />
-          </Link>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 py-4 px-3 overflow-y-auto">
-          <p className="px-3 text-[10px] uppercase tracking-[2px] text-[#555] font-semibold mb-2">
-            Principal
-          </p>
-          <ul className="flex flex-col gap-1 mb-6">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = tab === item.key;
-              return (
-                <li key={item.key}>
-                  <button
-                    onClick={() => {
-                      setTab(item.key);
-                      setSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all border-none cursor-pointer font-medium ${
-                      active
-                        ? "bg-[#1a1a1a] text-white"
-                        : "text-[#888] hover:text-white hover:bg-[#111]"
-                    }`}
-                  >
-                    {React.createElement(Icon, { size: 18, strokeWidth: 1.5 })}
-                    {item.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-
-          <p className="px-3 text-[10px] uppercase tracking-[2px] text-[#555] font-semibold mb-2">
-            Enlaces
-          </p>
-          <ul className="flex flex-col gap-1">
-            <li>
-              <Link
-                href="/designer"
-                target="_blank"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-[#888] hover:text-white hover:bg-[#111] transition-all"
-              >
-                <Palette size={18} strokeWidth={1.5} />
-                Crear Ropa
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/productos"
-                target="_blank"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-[#888] hover:text-white hover:bg-[#111] transition-all"
-              >
-                <Store size={18} strokeWidth={1.5} />
-                Ver Tienda
-              </Link>
-            </li>
-          </ul>
-        </nav>
-
-        {/* User */}
-        <div className="p-4 border-t border-[#1f1f1f]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-[#1f1f1f] flex items-center justify-center text-xs font-bold text-white">
-              {data.nombre?.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{data.nombre}</p>
-              <p className="text-xs text-[#666] capitalize">{data.rol}</p>
-            </div>
+        {/* Sidebar */}
+        <aside
+          className={`fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-[#0c0c0c] border-r border-[#1f1f1f] flex flex-col transition-transform duration-300 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}
+        >
+          {/* Logo */}
+          <div className="h-16 flex items-center px-6 border-b border-[#1f1f1f]">
+            <Link href="/" className="hover:opacity-80 transition-opacity">
+              <Image
+                src="/images/logo/Krea-blanco-sinfondo.png"
+                alt="Krea"
+                width={100}
+                height={36}
+                className="h-11 w-auto"
+                priority
+              />
+            </Link>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs text-[#888] hover:text-red-400 hover:bg-[#1a1a1a] transition-all border-none cursor-pointer bg-transparent"
-          >
-            <LogOut size={14} strokeWidth={1.5} />
-            Cerrar Sesión
-          </button>
-        </div>
-      </aside>
 
-      {/* Main */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="h-16 flex items-center justify-between px-6 border-b border-[#1f1f1f] bg-[#0c0c0c]/80 backdrop-blur-md sticky top-0 z-30">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 text-[#888] hover:text-white bg-transparent border-none cursor-pointer"
-            >
-              <Menu size={20} />
-            </button>
-            <h1 className="font-[family-name:var(--font-heading)] text-lg font-semibold tracking-[-0.5px]">
-              {navItems.find((n) => n.key === tab)?.label}
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="hidden sm:block text-xs text-[#555]">
-              {new Date().toLocaleDateString("es-MX", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
+          {/* Nav */}
+          <nav className="flex-1 py-4 px-3 overflow-y-auto">
+            <p className="px-3 text-[10px] uppercase tracking-[2px] text-[#555] font-semibold mb-2">
+              Principal
+            </p>
+            <ul className="flex flex-col gap-1 mb-6">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const active = tab === item.key;
+                return (
+                  <li key={item.key}>
+                    <button
+                      onClick={() => {
+                        setTab(item.key);
+                        setSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all border-none cursor-pointer font-medium ${
+                        active
+                          ? "bg-[#1a1a1a] text-white"
+                          : "text-[#888] hover:text-white hover:bg-[#111]"
+                      }`}
+                    >
+                      {React.createElement(Icon, {
+                        size: 18,
+                        strokeWidth: 1.5,
+                      })}
+                      {item.label}
+                    </button>
+                  </li>
+                );
               })}
-            </span>
-          </div>
-        </header>
+            </ul>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {tab === "resumen" && (
-            <div className="space-y-6">
-              {/* Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard
-                  icon={Package}
-                  label="Productos"
-                  value={data.totalProductos}
-                  color="#3b82f6"
-                  trend="+12%"
-                />
-                <StatCard
-                  icon={ShoppingCart}
-                  label="Pedidos"
-                  value={data.totalPedidos}
-                  color="#22c55e"
-                  trend="+5%"
-                />
-                <StatCard
-                  icon={Users}
-                  label="Clientes"
-                  value={data.totalUsuarios}
-                  color="#8b5cf6"
-                  trend="+8%"
-                />
-                <StatCard
-                  icon={DollarSign}
-                  label="Ingresos"
-                  value={`$${Number(data.ingresosTotales || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                  color="#f59e0b"
-                  trend="+15%"
-                />
+            <p className="px-3 text-[10px] uppercase tracking-[2px] text-[#555] font-semibold mb-2">
+              Enlaces
+            </p>
+            <ul className="flex flex-col gap-1">
+              <li>
+                <Link
+                  href="/designer"
+                  target="_blank"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-[#888] hover:text-white hover:bg-[#111] transition-all"
+                >
+                  <Palette size={18} strokeWidth={1.5} />
+                  Crear Ropa
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/productos"
+                  target="_blank"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-[#888] hover:text-white hover:bg-[#111] transition-all"
+                >
+                  <Store size={18} strokeWidth={1.5} />
+                  Ver Tienda
+                </Link>
+              </li>
+            </ul>
+          </nav>
+
+          {/* User */}
+          <div className="p-4 border-t border-[#1f1f1f]">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full bg-[#1f1f1f] flex items-center justify-center text-xs font-bold text-white">
+                {data.nombre?.charAt(0).toUpperCase()}
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{data.nombre}</p>
+                <p className="text-xs text-[#666] capitalize">{data.rol}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs text-[#888] hover:text-red-400 hover:bg-[#1a1a1a] transition-all border-none cursor-pointer bg-transparent"
+            >
+              <LogOut size={14} strokeWidth={1.5} />
+              Cerrar Sesión
+            </button>
+          </div>
+        </aside>
 
-              {/* Charts row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Ventas chart */}
-                {data.ventasMensuales.length > 0 && (
-                  <div className="lg:col-span-2 bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold">
-                          Ventas Mensuales
-                        </h3>
-                        <p className="text-xs text-[#666] mt-0.5">
-                          Últimos 6 meses
-                        </p>
+        {/* Main */}
+        <main className="flex-1 flex flex-col min-w-0">
+          {/* Top bar */}
+          <header className="h-16 flex items-center justify-between px-6 border-b border-[#1f1f1f] bg-[#0c0c0c]/80 backdrop-blur-md sticky top-0 z-30">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 -ml-2 text-[#888] hover:text-white bg-transparent border-none cursor-pointer"
+              >
+                <Menu size={20} />
+              </button>
+              <h1 className="font-[family-name:var(--font-heading)] text-lg font-semibold tracking-[-0.5px]">
+                {navItems.find((n) => n.key === tab)?.label}
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666]"
+                />
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                  className="pl-10 pr-10 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm rounded-lg focus:outline-none focus:border-[#888] w-48 sm:w-64 cursor-text"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-white bg-transparent border-none cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          </header>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {tab === "resumen" && (
+              <div className="space-y-6">
+                {/* Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                  <StatCard
+                    icon={Package}
+                    label="Productos"
+                    value={data.totalProductos}
+                    color="#3b82f6"
+                    trend={data.tendencias?.productos || "0%"}
+                  />
+                  <StatCard
+                    icon={ShoppingCart}
+                    label="Pedidos"
+                    value={data.totalPedidos}
+                    color="#22c55e"
+                    trend={data.tendencias?.pedidos || "0%"}
+                  />
+                  <StatCard
+                    icon={Users}
+                    label="Clientes"
+                    value={data.totalUsuarios}
+                    color="#8b5cf6"
+                    trend={data.tendencias?.usuarios || "0%"}
+                  />
+                  <StatCard
+                    icon={DollarSign}
+                    label="Ingresos"
+                    value={`$${Number(data.ingresosTotales || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    color="#f59e0b"
+                    trend={data.tendencias?.ingresos || "0%"}
+                  />
+                </div>
+
+                {/* Charts row */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Ventas chart */}
+                  {data.ventasMensuales.length > 0 && (
+                    <div className="lg:col-span-2 bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold">
+                            Ventas Mensuales
+                          </h3>
+                          <p className="text-xs text-[#666] mt-0.5">
+                            Últimos 6 meses
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-[#22c55e] bg-[#22c55e]/10 px-2.5 py-1 rounded-full">
+                          <TrendingUp size={14} />
+                          <span>+12.5%</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-[#22c55e] bg-[#22c55e]/10 px-2.5 py-1 rounded-full">
-                        <TrendingUp size={14} />
-                        <span>+12.5%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-end gap-3 h-[180px]">
-                      {data.ventasMensuales.map((v, i) => {
-                        const pct = Math.max(
-                          8,
-                          (Number(v.total_ventas || 0) / maxVentas) * 100,
-                        );
-                        return (
-                          <div
-                            key={i}
-                            className="flex-1 flex flex-col items-center gap-2 group"
-                          >
-                            <div className="relative w-full flex justify-center">
-                              <div
-                                className="w-full max-w-[40px] rounded-t bg-[#3b82f6]/80 group-hover:bg-[#3b82f6] transition-all relative"
-                                style={{ height: `${pct}%` }}
-                              >
-                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1a1a1a] border border-[#1f1f1f] text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                  ${Number(v.total_ventas || 0).toFixed(0)}
+                      <div className="flex items-end gap-3 h-[180px]">
+                        {data.ventasMensuales.map((v, i) => {
+                          const pct = Math.max(
+                            8,
+                            (Number(v.total_ventas || 0) / maxVentas) * 100,
+                          );
+                          return (
+                            <div
+                              key={i}
+                              className="flex-1 flex flex-col items-center gap-2 group"
+                            >
+                              <div className="relative w-full flex justify-center">
+                                <div
+                                  className="w-full max-w-[40px] rounded-t bg-[#3b82f6]/80 group-hover:bg-[#3b82f6] transition-all relative"
+                                  style={{ height: `${pct}%` }}
+                                >
+                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1a1a1a] border border-[#1f1f1f] text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                    ${Number(v.total_ventas || 0).toFixed(0)}
+                                  </div>
                                 </div>
                               </div>
+                              <span className="text-[10px] text-[#666] uppercase tracking-wide">
+                                {v.mes_label?.slice(0, 3)}
+                              </span>
                             </div>
-                            <span className="text-[10px] text-[#666] uppercase tracking-wide">
-                              {v.mes_label?.slice(0, 3)}
-                            </span>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Pedidos por estado */}
-                <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-6">
-                  <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold mb-5">
-                    Pedidos por Estado
-                  </h3>
-                  {data.pedidosPorEstado.length > 0 ? (
-                    <div className="flex flex-col gap-4">
-                      {data.pedidosPorEstado.map((p) => (
-                        <div key={p.estado} className="flex items-center gap-3">
-                          <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{
-                              background: statusColors[p.estado] || "#888",
-                            }}
-                          />
-                          <span className="text-sm text-[#aaa] flex-1 capitalize">
-                            {p.estado}
-                          </span>
-                          <div className="flex items-center gap-3">
-                            <div className="w-24 h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${Math.min(100, (p.cantidad / Math.max(data.totalPedidos, 1)) * 100)}%`,
-                                  background: statusColors[p.estado] || "#888",
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm font-semibold w-6 text-right">
-                              {p.cantidad}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[#888] text-sm">Sin datos</p>
                   )}
-                </div>
-              </div>
 
-              {/* Stock bajo + Top productos */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-6">
-                  <div className="flex items-center gap-2 mb-5">
-                    <AlertTriangle size={16} className="text-yellow-500" />
-                    <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold">
-                      Stock Bajo
+                  {/* Pedidos por estado */}
+                  <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-6">
+                    <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold mb-5">
+                      Pedidos por Estado
                     </h3>
-                  </div>
-                  {data.stockBajo.length > 0 ? (
-                    <div className="flex flex-col gap-3">
-                      {data.stockBajo.map((s, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between py-2 border-b border-[#1a1a1a] last:border-0"
-                        >
-                          <span className="text-sm text-[#ccc]">
-                            {s.nombre}
-                          </span>
-                          <span
-                            className={`text-sm font-semibold px-2 py-0.5 rounded ${s.stock < 5 ? "text-red-400 bg-red-400/10" : "text-yellow-400 bg-yellow-400/10"}`}
+                    {data.pedidosPorEstado.length > 0 ? (
+                      <div className="flex flex-col gap-4">
+                        {data.pedidosPorEstado.map((p) => (
+                          <div
+                            key={p.estado}
+                            className="flex items-center gap-3"
                           >
-                            {s.stock} uds.
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[#888] text-sm">Todo en buen nivel</p>
-                  )}
+                            <span
+                              className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{
+                                background: statusColors[p.estado] || "#888",
+                              }}
+                            />
+                            <span className="text-sm text-[#aaa] flex-1 capitalize">
+                              {p.estado}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              <div className="w-24 h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${Math.min(100, (p.cantidad / Math.max(data.totalPedidos, 1)) * 100)}%`,
+                                    background:
+                                      statusColors[p.estado] || "#888",
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm font-semibold w-6 text-right">
+                                {p.cantidad}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[#888] text-sm">Sin datos</p>
+                    )}
+                  </div>
                 </div>
 
-                {data.productosTop.length > 0 && (
+                {/* Stock bajo + Top productos */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-6">
                     <div className="flex items-center gap-2 mb-5">
-                      <TrendingUp size={16} className="text-green-500" />
+                      <AlertTriangle size={16} className="text-yellow-500" />
                       <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold">
-                        Top Productos
+                        Stock Bajo
                       </h3>
                     </div>
-                    <div className="flex flex-col gap-3">
-                      {data.productosTop.map((p, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-3 py-2 border-b border-[#1a1a1a] last:border-0"
-                        >
-                          <span className="w-6 h-6 rounded-full bg-[#1a1a1a] flex items-center justify-center text-xs font-bold text-[#888]">
-                            {i + 1}
-                          </span>
-                          <span className="text-sm text-[#ccc] flex-1 truncate">
-                            {p.nombre}
-                          </span>
-                          <span className="text-xs text-[#666]">
-                            {p.total_vendido} vend.
-                          </span>
-                          <span className="text-sm font-semibold text-green-400">
-                            ${Number(p.total_ingresos || 0).toFixed(0)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    {data.stockBajo.length > 0 ? (
+                      <div className="flex flex-col gap-3">
+                        {data.stockBajo.map((s, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between py-2 border-b border-[#1a1a1a] last:border-0"
+                          >
+                            <span className="text-sm text-[#ccc]">
+                              {s.nombre}
+                            </span>
+                            <span
+                              className={`text-sm font-semibold px-2 py-0.5 rounded ${s.stock < 5 ? "text-red-400 bg-red-400/10" : "text-yellow-400 bg-yellow-400/10"}`}
+                            >
+                              {s.stock} uds.
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[#888] text-sm">Todo en buen nivel</p>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Pedidos recientes */}
-              <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
-                  <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold">
-                    Pedidos Recientes
-                  </h3>
-                  <button
-                    onClick={() => setTab("pedidos")}
-                    className="text-xs text-[#3b82f6] hover:text-[#60a5fa] flex items-center gap-1 bg-transparent border-none cursor-pointer"
-                  >
-                    Ver todos <ArrowUpRight size={14} />
-                  </button>
+                  {data.productosTop.length > 0 && (
+                    <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-6">
+                      <div className="flex items-center gap-2 mb-5">
+                        <TrendingUp size={16} className="text-green-500" />
+                        <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold">
+                          Top Productos
+                        </h3>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        {data.productosTop.map((p, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 py-2 border-b border-[#1a1a1a] last:border-0"
+                          >
+                            <span className="w-6 h-6 rounded-full bg-[#1a1a1a] flex items-center justify-center text-xs font-bold text-[#888]">
+                              {i + 1}
+                            </span>
+                            <span className="text-sm text-[#ccc] flex-1 truncate">
+                              {p.nombre}
+                            </span>
+                            <span className="text-xs text-[#666]">
+                              {p.total_vendido} vend.
+                            </span>
+                            <span className="text-sm font-semibold text-green-400">
+                              ${Number(p.total_ingresos || 0).toFixed(0)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[#1f1f1f]">
-                        {["Pedido", "Cliente", "Total", "Estado", "Fecha"].map(
-                          (h) => (
+
+                {/* Pedidos recientes */}
+                <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl overflow-hidden">
+                  <div className="px-6 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
+                    <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold">
+                      Pedidos Recientes
+                    </h3>
+                    <button
+                      onClick={() => setTab("pedidos")}
+                      className="text-xs text-[#3b82f6] hover:text-[#60a5fa] flex items-center gap-1 bg-transparent border-none cursor-pointer"
+                    >
+                      Ver todos <ArrowUpRight size={14} />
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[#1f1f1f]">
+                          {[
+                            "Pedido",
+                            "Cliente",
+                            "Total",
+                            "Estado",
+                            "Fecha",
+                          ].map((h) => (
                             <th
                               key={h}
                               className="text-left px-6 py-3 text-[10px] uppercase tracking-[1.5px] text-[#666] font-semibold"
                             >
                               {h}
                             </th>
-                          ),
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.pedidosRecientes.map((p) => (
-                        <tr
-                          key={p.id}
-                          className="border-b border-[#1a1a1a] hover:bg-[#111] transition-colors"
-                        >
-                          <td className="px-6 py-3 font-mono text-xs text-[#888]">
-                            #{p.numero_pedido}
-                          </td>
-                          <td className="px-6 py-3 text-[#ccc]">
-                            {p.nombre} {p.apellido}
-                          </td>
-                          <td className="px-6 py-3 font-semibold">
-                            ${Number(p.total).toFixed(2)}
-                          </td>
-                          <td className="px-6 py-3">
-                            <span
-                              className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full capitalize"
-                              style={{
-                                color: statusColors[p.estado] || "#888",
-                                background:
-                                  `${statusColors[p.estado]}15` || "#1a1a1a",
-                              }}
-                            >
-                              <span
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{
-                                  background: statusColors[p.estado] || "#888",
-                                }}
-                              />
-                              {p.estado}
-                            </span>
-                          </td>
-                          <td className="px-6 py-3 text-[#888] text-xs">
-                            {new Date(p.creado_en).toLocaleDateString("es-MX")}
-                          </td>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {data.pedidosRecientes.map((p) => (
+                          <tr
+                            key={p.id}
+                            className="border-b border-[#1a1a1a] hover:bg-[#111] transition-colors"
+                          >
+                            <td className="px-6 py-3 font-mono text-xs text-[#888]">
+                              #{p.numero_pedido}
+                            </td>
+                            <td className="px-6 py-3 text-[#ccc]">
+                              {p.nombre} {p.apellido}
+                            </td>
+                            <td className="px-6 py-3 font-semibold">
+                              ${Number(p.total).toFixed(2)}
+                            </td>
+                            <td className="px-6 py-3">
+                              <span
+                                className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full capitalize"
+                                style={{
+                                  color: statusColors[p.estado] || "#888",
+                                  background:
+                                    `${statusColors[p.estado]}15` || "#1a1a1a",
+                                }}
+                              >
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full"
+                                  style={{
+                                    background:
+                                      statusColors[p.estado] || "#888",
+                                  }}
+                                />
+                                {p.estado}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3 text-[#888] text-xs">
+                              {new Date(p.creado_en).toLocaleDateString(
+                                "es-MX",
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {tab === "productos" && <AdminProductos />}
-          {tab === "pedidos" && <AdminPedidos />}
-          {tab === "usuarios" && <AdminUsuarios />}
-          {tab === "contactos" && <AdminContactos />}
-          {tab === "categorias" && <AdminCategorias />}
-          {tab === "cupones" && <AdminCupones />}
-          {tab === "resenas" && <AdminResenas />}
-        </div>
-      </main>
-    </div>
+            {tab === "productos" && (
+              <AdminProductos searchQuery={searchQuery} />
+            )}
+            {tab === "pedidos" && <AdminPedidos searchQuery={searchQuery} />}
+            {tab === "usuarios" && <AdminUsuarios searchQuery={searchQuery} />}
+            {tab === "contactos" && (
+              <AdminContactos searchQuery={searchQuery} />
+            )}
+            {tab === "categorias" && (
+              <AdminCategorias searchQuery={searchQuery} />
+            )}
+            {tab === "cupones" && <AdminCupones searchQuery={searchQuery} />}
+            {tab === "resenas" && <AdminResenas searchQuery={searchQuery} />}
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
 
@@ -586,7 +632,7 @@ function StatCard({
   );
 }
 
-function AdminProductos() {
+function AdminProductos({ searchQuery }: { searchQuery: string }) {
   const [productos, setProductos] = useState<Record<string, unknown>[]>([]);
   const [categorias, setCategorias] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
@@ -598,6 +644,16 @@ function AdminProductos() {
     estado: "",
     categoria_id: "",
   });
+
+  const filteredProductos = React.useMemo(() => {
+    return productos.filter(
+      (p) =>
+        String(p.nombre).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(p.categoria_nombre || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+    );
+  }, [productos, searchQuery]);
 
   const fetchProductos = () => {
     fetch("/api/admin/products")
@@ -708,6 +764,13 @@ function AdminProductos() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, nombre: e.target.value })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const form = (e.currentTarget as HTMLInputElement).form;
+                      if (form) (form.elements[1] as HTMLInputElement)?.focus();
+                    }
+                  }}
                   className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
                   required
                 />
@@ -721,6 +784,14 @@ function AdminProductos() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, descripcion: e.target.value })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      const form = (e.currentTarget as HTMLTextAreaElement)
+                        .form;
+                      if (form) (form.elements[2] as HTMLInputElement)?.focus();
+                    }
+                  }}
                   rows={3}
                   className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
                 />
@@ -735,8 +806,19 @@ function AdminProductos() {
                     step="0.01"
                     value={editForm.precio_base}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, precio_base: e.target.value })
+                      setEditForm({
+                        ...editForm,
+                        precio_base: e.currentTarget.value,
+                      })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        (
+                          e.currentTarget.form?.elements[3] as HTMLInputElement
+                        )?.focus();
+                      }
+                    }}
                     className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
                     required
                   />
@@ -748,8 +830,19 @@ function AdminProductos() {
                   <select
                     value={editForm.estado}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, estado: e.target.value })
+                      setEditForm({
+                        ...editForm,
+                        estado: e.currentTarget.value,
+                      })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        (
+                          e.currentTarget.form?.elements[4] as HTMLInputElement
+                        )?.focus();
+                      }
+                    }}
                     className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888] cursor-pointer"
                   >
                     {["borrador", "publicado", "pausado", "agotado"].map(
@@ -769,8 +862,19 @@ function AdminProductos() {
                 <select
                   value={editForm.categoria_id}
                   onChange={(e) =>
-                    setEditForm({ ...editForm, categoria_id: e.target.value })
+                    setEditForm({
+                      ...editForm,
+                      categoria_id: e.currentTarget.value,
+                    })
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      (
+                        e.currentTarget.form?.elements[5] as HTMLButtonElement
+                      )?.focus();
+                    }
+                  }}
                   className="w-full px-3 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888] cursor-pointer"
                 >
                   <option value="">Sin categoría</option>
@@ -810,7 +914,7 @@ function AdminProductos() {
         </div>
       )}
 
-      {productos.length > 0 ? (
+      {filteredProductos.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -834,7 +938,7 @@ function AdminProductos() {
               </tr>
             </thead>
             <tbody>
-              {productos.map((p) => (
+              {filteredProductos.map((p) => (
                 <tr key={String(p.id)} className="border-b border-[#1f1f1f]">
                   <td className="p-3">{String(p.id)}</td>
                   <td className="p-3">{String(p.nombre)}</td>
@@ -881,15 +985,33 @@ function AdminProductos() {
           </table>
         </div>
       ) : (
-        <p className="text-[#888]">No hay productos.</p>
+        <p className="text-[#888]">
+          {searchQuery ? "No se encontraron resultados." : "No hay productos."}
+        </p>
       )}
     </div>
   );
 }
 
-function AdminPedidos() {
+function AdminPedidos({ searchQuery }: { searchQuery: string }) {
   const [pedidos, setPedidos] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const filteredPedidos = React.useMemo(() => {
+    return pedidos.filter(
+      (p) =>
+        String(p.numero_pedido)
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        String(p.cliente_nombre || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        String(p.cliente_apellido || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        String(p.estado).toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [pedidos, searchQuery]);
 
   useEffect(() => {
     fetch("/api/admin/orders")
@@ -978,15 +1100,29 @@ function AdminPedidos() {
           </table>
         </div>
       ) : (
-        <p className="text-[#888]">No hay pedidos.</p>
+        <p className="text-[#888]">
+          {searchQuery ? "No se encontraron resultados." : "No hay pedidos."}
+        </p>
       )}
     </div>
   );
 }
 
-function AdminUsuarios() {
+function AdminUsuarios({ searchQuery }: { searchQuery: string }) {
   const [usuarios, setUsuarios] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const filteredUsuarios = React.useMemo(() => {
+    return usuarios.filter(
+      (u) =>
+        String(u.nombre).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(u.apellido || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        String(u.correo).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(u.rol).toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [usuarios, searchQuery]);
 
   const fetchUsuarios = () => {
     fetch("/api/admin/users")
@@ -1016,7 +1152,7 @@ function AdminUsuarios() {
       <h2 className="font-[family-name:var(--font-heading)] text-xl font-semibold mb-4">
         Gestión de Usuarios
       </h2>
-      {usuarios.length > 0 ? (
+      {filteredUsuarios.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -1032,7 +1168,7 @@ function AdminUsuarios() {
               </tr>
             </thead>
             <tbody>
-              {usuarios.map((u) => (
+              {filteredUsuarios.map((u) => (
                 <tr key={String(u.id)} className="border-b border-[#1f1f1f]">
                   <td className="p-3">{String(u.id)}</td>
                   <td className="p-3">
@@ -1065,15 +1201,27 @@ function AdminUsuarios() {
           </table>
         </div>
       ) : (
-        <p className="text-[#888]">No hay usuarios.</p>
+        <p className="text-[#888]">
+          {searchQuery ? "No se encontraron resultados." : "No hay usuarios."}
+        </p>
       )}
     </div>
   );
 }
 
-function AdminContactos() {
+function AdminContactos({ searchQuery }: { searchQuery: string }) {
   const [mensajes, setMensajes] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const filteredMensajes = React.useMemo(() => {
+    return mensajes.filter(
+      (m) =>
+        String(m.nombre).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(m.email).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(m.asunto).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(m.mensaje).toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [mensajes, searchQuery]);
 
   const fetchMensajes = () => {
     fetch("/api/admin/contacts")
@@ -1103,7 +1251,7 @@ function AdminContactos() {
       <h2 className="font-[family-name:var(--font-heading)] text-xl font-semibold mb-4">
         Mensajes de Contacto
       </h2>
-      {mensajes.length > 0 ? (
+      {filteredMensajes.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -1126,7 +1274,7 @@ function AdminContactos() {
               </tr>
             </thead>
             <tbody>
-              {mensajes.map((m) => (
+              {filteredMensajes.map((m) => (
                 <tr
                   key={String(m.id)}
                   className={`border-b border-[#1f1f1f] ${!m.leido ? "bg-[#1a1a1a]/30" : ""}`}
@@ -1160,16 +1308,28 @@ function AdminContactos() {
           </table>
         </div>
       ) : (
-        <p className="text-[#888]">No hay mensajes de contacto.</p>
+        <p className="text-[#888]">
+          {searchQuery
+            ? "No se encontraron resultados."
+            : "No hay mensajes de contacto."}
+        </p>
       )}
     </div>
   );
 }
 
-function AdminCategorias() {
+function AdminCategorias({ searchQuery }: { searchQuery: string }) {
   const [categorias, setCategorias] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ nombre: "", slug: "" });
+
+  const filteredCategorias = React.useMemo(() => {
+    return categorias.filter(
+      (c) =>
+        String(c.nombre).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(c.slug).toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [categorias, searchQuery]);
 
   const fetchCategorias = () => {
     fetch("/api/admin/categories")
@@ -1217,6 +1377,13 @@ function AdminCategorias() {
           placeholder="Nombre de categoría"
           value={form.nombre}
           onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const form = (e.currentTarget as HTMLInputElement).form;
+              if (form) (form.elements[1] as HTMLButtonElement)?.focus();
+            }
+          }}
           className="flex-1 px-4 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
           required
         />
@@ -1227,7 +1394,7 @@ function AdminCategorias() {
           Agregar
         </button>
       </form>
-      {categorias.length > 0 ? (
+      {filteredCategorias.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -1243,7 +1410,7 @@ function AdminCategorias() {
               </tr>
             </thead>
             <tbody>
-              {categorias.map((c) => (
+              {filteredCategorias.map((c) => (
                 <tr key={String(c.id)} className="border-b border-[#1f1f1f]">
                   <td className="p-3">{String(c.id)}</td>
                   <td className="p-3">{String(c.nombre)}</td>
@@ -1262,13 +1429,15 @@ function AdminCategorias() {
           </table>
         </div>
       ) : (
-        <p className="text-[#888]">No hay categorías.</p>
+        <p className="text-[#888]">
+          {searchQuery ? "No se encontraron resultados." : "No hay categorías."}
+        </p>
       )}
     </div>
   );
 }
 
-function AdminCupones() {
+function AdminCupones({ searchQuery }: { searchQuery: string }) {
   const [cupones, setCupones] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
@@ -1279,6 +1448,16 @@ function AdminCupones() {
     limite_usos: "",
     fecha_fin: "",
   });
+
+  const filteredCupones = React.useMemo(() => {
+    return cupones.filter(
+      (c) =>
+        String(c.codigo).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(c.tipo_descuento)
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+    );
+  }, [cupones, searchQuery]);
 
   const fetchCupones = () => {
     fetch("/api/admin/coupons")
@@ -1340,12 +1519,26 @@ function AdminCupones() {
           placeholder="Código"
           value={form.codigo}
           onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const form = (e.currentTarget as HTMLInputElement).form;
+              if (form) (form.elements[1] as HTMLSelectElement)?.focus();
+            }
+          }}
           className="px-4 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
           required
         />
         <select
           value={form.tipo_descuento}
           onChange={(e) => setForm({ ...form, tipo_descuento: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const form = (e.currentTarget as HTMLSelectElement).form;
+              if (form) (form.elements[2] as HTMLInputElement)?.focus();
+            }
+          }}
           className="px-4 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888] cursor-pointer"
         >
           <option value="porcentaje">Porcentaje</option>
@@ -1357,6 +1550,13 @@ function AdminCupones() {
           placeholder="Valor"
           value={form.valor}
           onChange={(e) => setForm({ ...form, valor: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const form = (e.currentTarget as HTMLInputElement).form;
+              if (form) (form.elements[3] as HTMLInputElement)?.focus();
+            }
+          }}
           className="px-4 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
           required
         />
@@ -1365,6 +1565,13 @@ function AdminCupones() {
           placeholder="Mínimo compra"
           value={form.minimo_compra}
           onChange={(e) => setForm({ ...form, minimo_compra: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const form = (e.currentTarget as HTMLInputElement).form;
+              if (form) (form.elements[4] as HTMLInputElement)?.focus();
+            }
+          }}
           className="px-4 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
         />
         <input
@@ -1372,6 +1579,13 @@ function AdminCupones() {
           placeholder="Límite usos (vacío = ilimitado)"
           value={form.limite_usos}
           onChange={(e) => setForm({ ...form, limite_usos: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const form = (e.currentTarget as HTMLInputElement).form;
+              if (form) (form.elements[5] as HTMLInputElement)?.focus();
+            }
+          }}
           className="px-4 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
         />
         <input
@@ -1379,6 +1593,13 @@ function AdminCupones() {
           placeholder="Fecha fin"
           value={form.fecha_fin}
           onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const form = (e.currentTarget as HTMLInputElement).form;
+              if (form) (form.elements[6] as HTMLButtonElement)?.focus();
+            }
+          }}
           className="px-4 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
         />
         <button
@@ -1388,7 +1609,7 @@ function AdminCupones() {
           Agregar Cupón
         </button>
       </form>
-      {cupones.length > 0 ? (
+      {filteredCupones.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -1406,7 +1627,7 @@ function AdminCupones() {
               </tr>
             </thead>
             <tbody>
-              {cupones.map((c) => (
+              {filteredCupones.map((c) => (
                 <tr key={String(c.id)} className="border-b border-[#1f1f1f]">
                   <td className="p-3 font-semibold">{String(c.codigo)}</td>
                   <td className="p-3">{String(c.tipo_descuento)}</td>
@@ -1442,15 +1663,33 @@ function AdminCupones() {
           </table>
         </div>
       ) : (
-        <p className="text-[#888]">No hay cupones.</p>
+        <p className="text-[#888]">
+          {searchQuery ? "No se encontraron resultados." : "No hay cupones."}
+        </p>
       )}
     </div>
   );
 }
 
-function AdminResenas() {
+function AdminResenas({ searchQuery }: { searchQuery: string }) {
   const [resenas, setResenas] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const filteredResenas = React.useMemo(() => {
+    return resenas.filter(
+      (r) =>
+        String(r.producto_nombre)
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        String(r.usuario_nombre || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        String(r.usuario_apellido || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        String(r.comentario).toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [resenas, searchQuery]);
 
   const fetchResenas = () => {
     fetch("/api/admin/reviews")
@@ -1480,7 +1719,7 @@ function AdminResenas() {
       <h2 className="font-[family-name:var(--font-heading)] text-xl font-semibold mb-4">
         Gestión de Reseñas
       </h2>
-      {resenas.length > 0 ? (
+      {filteredResenas.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -1504,7 +1743,7 @@ function AdminResenas() {
               </tr>
             </thead>
             <tbody>
-              {resenas.map((r) => (
+              {filteredResenas.map((r) => (
                 <tr
                   key={String(r.id)}
                   className={`border-b border-[#1f1f1f] ${!r.aprobada ? "bg-[#1a1a1a]/30" : ""}`}
@@ -1549,7 +1788,9 @@ function AdminResenas() {
           </table>
         </div>
       ) : (
-        <p className="text-[#888]">No hay reseñas.</p>
+        <p className="text-[#888]">
+          {searchQuery ? "No se encontraron resultados." : "No hay reseñas."}
+        </p>
       )}
     </div>
   );

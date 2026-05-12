@@ -28,6 +28,10 @@ export default function CustomCursor() {
     ring.style.left = ringX + "px";
     ring.style.top = ringY + "px";
 
+    // Ensure cursor is visible on mount
+    dot.classList.remove("hidden");
+    ring.classList.remove("hidden");
+
     const onMouseMove = (e: MouseEvent) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
@@ -64,7 +68,7 @@ export default function CustomCursor() {
 
     function bindInteractive() {
       const els = document.querySelectorAll(
-        "a, button, .product-card, .offer-card, input, textarea, select, .btn, [role='button']",
+        "a, button, .product-card, .offer-card, input, textarea, select, .btn, [role='button'], option",
       );
       els.forEach((el) => {
         el.removeEventListener("mouseenter", onEnter);
@@ -83,28 +87,58 @@ export default function CustomCursor() {
       dot.classList.remove("active");
       ring.classList.remove("active");
     };
-    const onDocLeave = () => {
+
+    // Handle select dropdown - hide custom cursor when select is focused
+    const onSelectFocus = () => {
       dot.classList.add("hidden");
       ring.classList.add("hidden");
     };
-    const onDocEnter = () => {
+    const onSelectBlur = () => {
       dot.classList.remove("hidden");
       ring.classList.remove("hidden");
     };
 
+    // Keep cursor visible at all times, don't hide on document leave
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        dot.classList.add("hidden");
+        ring.classList.add("hidden");
+      } else {
+        dot.classList.remove("hidden");
+        ring.classList.remove("hidden");
+      }
+    };
+
     document.addEventListener("mousedown", onDown);
     document.addEventListener("mouseup", onUp);
-    document.addEventListener("mouseleave", onDocLeave);
-    document.addEventListener("mouseenter", onDocEnter);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    // Bind select focus/blur events
+    const bindSelectEvents = () => {
+      const selects = document.querySelectorAll("select");
+      selects.forEach((select) => {
+        select.addEventListener("focus", onSelectFocus);
+        select.addEventListener("blur", onSelectBlur);
+      });
+    };
+    bindSelectEvents();
+
+    // Re-bind select events when DOM changes
+    observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       cancelAnimationFrame(animId);
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("mouseup", onUp);
-      document.removeEventListener("mouseleave", onDocLeave);
-      document.removeEventListener("mouseenter", onDocEnter);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       observer.disconnect();
+      // Clean up select events
+      const selects = document.querySelectorAll("select");
+      selects.forEach((select) => {
+        select.removeEventListener("focus", onSelectFocus);
+        select.removeEventListener("blur", onSelectBlur);
+      });
     };
   }, []);
 

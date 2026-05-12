@@ -20,8 +20,14 @@ export async function GET() {
     );
 
     const direcciones = await query(
-      `SELECT id, etiqueta, nombre_destinatario, ciudad, estado, codigo_postal, linea_1, predeterminada
+      `SELECT id, etiqueta, nombre_destinatario, telefono_destinatario, pais, ciudad, estado, codigo_postal, linea_1, linea_2, predeterminada
        FROM direcciones WHERE usuario_id = ? ORDER BY predeterminada DESC, creado_en DESC LIMIT 6`,
+      [user.userId],
+    );
+
+    const metodos_pago = await query(
+      `SELECT id, tipo, nombre, numero_tarjeta, titular, fecha_expiracion, es_default, activo
+       FROM metodos_pago_usuario WHERE usuario_id = ? AND activo = true ORDER BY es_default DESC, creado_en DESC`,
       [user.userId],
     );
 
@@ -35,6 +41,7 @@ export async function GET() {
       },
       pedidos,
       direcciones,
+      metodos_pago,
     };
 
     if (["vendedor", "admin"].includes(user.rol || "")) {
