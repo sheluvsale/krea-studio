@@ -23,6 +23,21 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ isLoggedIn: boolean } | null>(null);
   const [showBeta, setShowBeta] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<
+    {
+      id: number;
+      nombre: string;
+      descripcion?: string;
+      imagen_url?: string;
+      comision_porcentaje?: number;
+    }[]
+  >([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [paymentMsg, setPaymentMsg] = useState("");
+  const [cupon, setCupon] = useState("");
+  const [cuponValido, setCuponValido] = useState(false);
+  const [descuento, setDescuento] = useState(0);
+  const [cuponMsg, setCuponMsg] = useState("");
 
   const fetchCart = useCallback(async () => {
     try {
@@ -43,6 +58,17 @@ export default function CartPage() {
       .catch(() => setUser(null));
     fetchCart();
   }, [fetchCart]);
+
+  useEffect(() => {
+    if (!showBeta) return;
+    setPaymentMsg("");
+    setLoadingPayments(true);
+    fetch("/api/payment-methods")
+      .then((r) => r.json())
+      .then((d) => setPaymentMethods(d.metodos || []))
+      .catch(() => setPaymentMethods([]))
+      .finally(() => setLoadingPayments(false));
+  }, [showBeta]);
 
   const updateQty = async (id: number, delta: number) => {
     const item = items.find((i) => i.id === id);
@@ -72,7 +98,40 @@ export default function CartPage() {
   const envioGratis = subtotal >= ENVIO_GRATIS_MINIMO;
   const costoEnvio = envioGratis ? 0 : COSTO_ENVIO;
   const impuestos = subtotal * 0.16;
-  const total = subtotal + costoEnvio + impuestos;
+  const total = subtotal + costoEnvio + impuestos - descuento;
+
+  const validarCupon = async () => {
+    if (!cupon.trim()) {
+      setCuponMsg("Ingresa un código de cupón.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codigo: cupon,
+          total: subtotal + costoEnvio + impuestos,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setCuponValido(true);
+        setDescuento(Number(data.descuento));
+        setCuponMsg(`¡Cupón aplicado! Descuento: $${data.descuento}`);
+      } else {
+        setCuponValido(false);
+        setDescuento(0);
+        setCuponMsg(data.error || "Cupón inválido.");
+      }
+    } catch (error) {
+      setCuponValido(false);
+      setDescuento(0);
+      setCuponMsg("Error al validar cupón.");
+    }
+  };
 
   if (loading) {
     return (
@@ -222,6 +281,52 @@ export default function CartPage() {
               ))}
             </div>
 
+            {/* Cupón */}
+            <div className="bg-[#141414] border border-[#2a2a2a] p-8 mb-6">
+              <label className="block text-xs uppercase tracking-[1.5px] text-[#888] font-[family-name:var(--font-heading)] mb-4">
+                Cupón de Descuento
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={cupon}
+                  onChange={(e) => setCupon(e.target.value.toUpperCase())}
+                  placeholder="Código de cupón"
+                  disabled={cuponValido}
+                  className="flex-1 px-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888] uppercase"
+                />
+                {!cuponValido ? (
+                  <button
+                    type="button"
+                    onClick={validarCupon}
+                    className="px-6 py-3 bg-[#ffffff] text-[#0a0a0a] text-[0.75rem] uppercase tracking-[2px] font-[family-name:var(--font-heading)] font-semibold transition-all hover:bg-[#d4d4d4] border-none cursor-pointer"
+                  >
+                    Aplicar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCupon("");
+                      setCuponValido(false);
+                      setDescuento(0);
+                      setCuponMsg("");
+                    }}
+                    className="px-6 py-3 bg-red-500 text-white text-[0.75rem] uppercase tracking-[2px] font-[family-name:var(--font-heading)] font-semibold transition-all hover:bg-red-600 border-none cursor-pointer"
+                  >
+                    Remover
+                  </button>
+                )}
+              </div>
+              {cuponMsg && (
+                <p
+                  className={`text-xs mt-2 ${cuponValido ? "text-green-400" : "text-red-400"}`}
+                >
+                  {cuponMsg}
+                </p>
+              )}
+            </div>
+
             <div className="bg-[#141414] border border-[#2a2a2a] p-8 h-fit">
               <h2 className="font-[family-name:var(--font-heading)] text-lg uppercase tracking-[2px] mb-6">
                 Resumen del Pedido
@@ -236,10 +341,18 @@ export default function CartPage() {
                   {envioGratis ? "Gratis" : `$${costoEnvio.toFixed(2)}`}
                 </span>
               </div>
-              <div className="flex justify-between text-sm mb-6">
+              <div className="flex justify-between text-sm mb-3">
                 <span className="text-[#888]">Impuestos</span>
                 <span>${impuestos.toFixed(2)}</span>
               </div>
+              {descuento > 0 && (
+                <div className="flex justify-between text-sm mb-3">
+                  <span className="text-green-400">Descuento</span>
+                  <span className="text-green-400">
+                    -$${descuento.toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-lg font-semibold border-t border-[#2a2a2a] pt-4 mb-6">
                 <span>Total</span>
                 <span className="text-[#ffffff]">${total.toFixed(2)}</span>
@@ -277,19 +390,69 @@ export default function CartPage() {
             >
               &times;
             </button>
-            <div className="text-4xl mb-4">🚧</div>
-            <h3 className="font-[family-name:var(--font-heading)] text-xl mb-2">
-              Proyecto Beta
+            <h3 className="font-[family-name:var(--font-heading)] text-xl mb-4">
+              Finalizar Compra
             </h3>
             <p className="text-[#888] text-sm mb-6">
-              La opción de pago no está disponible. Estamos trabajando para
-              habilitar esta función pronto.
+              Selecciona un método de pago disponible. El procesamiento de pagos
+              se activará próximamente.
             </p>
+            {paymentMsg && (
+              <div className="bg-[#2a1a1a] border border-red-900/40 text-red-300 text-sm px-4 py-3 rounded mb-6">
+                {paymentMsg}
+              </div>
+            )}
+            {loadingPayments ? (
+              <div className="text-[#888] text-sm mb-6">
+                Cargando métodos...
+              </div>
+            ) : paymentMethods.length === 0 ? (
+              <div className="text-[#888] text-sm mb-6">
+                No hay métodos de pago configurados.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 mb-6">
+                {paymentMethods.map((m) => (
+                  <button
+                    key={m.id}
+                    className="flex items-center gap-3 w-full text-left border border-[#2a2a2a] rounded px-4 py-3 text-sm text-[#f5f5f5] hover:border-[#888] hover:bg-[#1a1a1a] transition-colors bg-transparent"
+                    onClick={() =>
+                      setPaymentMsg("Método de pago aún no disponible")
+                    }
+                  >
+                    {m.imagen_url ? (
+                      <img
+                        src={m.imagen_url}
+                        alt={m.nombre}
+                        className="w-8 h-8 object-contain"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-[#2a2a2a] rounded flex items-center justify-center text-xs text-[#888]">
+                        P
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-medium">{m.nombre}</div>
+                      {m.descripcion && (
+                        <div className="text-xs text-[#888]">
+                          {m.descripcion}
+                        </div>
+                      )}
+                      {m.comision_porcentaje ? (
+                        <div className="text-xs text-[#888]">
+                          Comisión: {m.comision_porcentaje}%
+                        </div>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
             <button
-              className="bg-[#ffffff] text-[#0a0a0a] px-8 py-3 text-[0.75rem] uppercase tracking-[2px] font-[family-name:var(--font-heading)] font-semibold transition-all hover:bg-[#d4d4d4]"
+              className="w-full bg-[#ffffff] text-[#0a0a0a] py-3 text-[0.75rem] uppercase tracking-[2px] font-[family-name:var(--font-heading)] font-semibold transition-all hover:bg-[#d4d4d4]"
               onClick={() => setShowBeta(false)}
             >
-              Entendido
+              Cerrar
             </button>
           </div>
         </div>

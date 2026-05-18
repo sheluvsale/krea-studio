@@ -6,6 +6,7 @@ interface CustomCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
+  description?: string;
   id?: string;
   className?: string;
 }
@@ -14,6 +15,7 @@ export default function CustomCheckbox({
   checked,
   onChange,
   label,
+  description,
   id,
   className = "",
 }: CustomCheckboxProps) {
@@ -31,8 +33,8 @@ export default function CustomCheckbox({
           checked
             ? "bg-[#ffffff] border-[#ffffff]"
             : isHovered
-            ? "border-[#ffffff]"
-            : "border-[#888]"
+              ? "border-[#ffffff]"
+              : "border-[#888]"
         }`}
       >
         {checked && (
@@ -51,10 +53,19 @@ export default function CustomCheckbox({
           </svg>
         )}
       </div>
-      {label && (
-        <label htmlFor={id} className="text-sm text-[#f5f5f5] cursor-pointer select-none">
-          {label}
-        </label>
+      {(label || description) && (
+        <div className="flex flex-col cursor-pointer select-none">
+          {label && (
+            <label htmlFor={id} className="text-sm text-[#f5f5f5]">
+              {label}
+            </label>
+          )}
+          {description && (
+            <span className="text-xs text-[#666] leading-tight">
+              {description}
+            </span>
+          )}
+        </div>
       )}
       <input
         type="checkbox"

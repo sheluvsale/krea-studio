@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
 import { useDesignerStore } from "./store/designer-store";
 import GarmentSelector from "./components/GarmentSelector";
 import GarmentTabs from "./components/GarmentTabs";
@@ -12,6 +11,7 @@ import PropertiesSidebar from "./components/PropertiesSidebar";
 import HelpModal from "./components/HelpModal";
 import Toast from "./components/Toast";
 import MobileWarning from "@/components/MobileWarning";
+import PasswordGate from "./PasswordGate";
 
 const ThreePreview = dynamic(() => import("./components/ThreePreview"), {
   ssr: false,
@@ -27,7 +27,7 @@ export default function DesignerPage() {
   const activeTabId = useDesignerStore((s) => s.activeTabId);
 
   return (
-    <>
+    <PasswordGate>
       <MobileWarning />
       <div className="flex h-full flex-col">
         {/* Garment Selection Modal */}
@@ -57,6 +57,6 @@ export default function DesignerPage() {
           </>
         )}
       </div>
-    </>
+    </PasswordGate>
   );
 }

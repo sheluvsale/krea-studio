@@ -98,20 +98,31 @@ export default function CustomCursor() {
       ring.classList.remove("hidden");
     };
 
-    // Keep cursor visible at all times, don't hide on document leave
+    const onMouseLeave = () => {
+      dot.classList.add("hidden");
+      ring.classList.add("hidden");
+    };
+    const onMouseEnterWindow = () => {
+      dot.classList.remove("hidden");
+      ring.classList.remove("hidden");
+    };
+    const onWindowBlur = () => {
+      dot.classList.add("hidden");
+      ring.classList.add("hidden");
+    };
     const onVisibilityChange = () => {
       if (document.hidden) {
         dot.classList.add("hidden");
         ring.classList.add("hidden");
-      } else {
-        dot.classList.remove("hidden");
-        ring.classList.remove("hidden");
       }
     };
 
+    document.documentElement.addEventListener("mouseleave", onMouseLeave);
+    document.documentElement.addEventListener("mouseenter", onMouseEnterWindow);
+    window.addEventListener("blur", onWindowBlur);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     document.addEventListener("mousedown", onDown);
     document.addEventListener("mouseup", onUp);
-    document.addEventListener("visibilitychange", onVisibilityChange);
 
     // Bind select focus/blur events
     const bindSelectEvents = () => {
@@ -129,9 +140,15 @@ export default function CustomCursor() {
     return () => {
       cancelAnimationFrame(animId);
       document.removeEventListener("mousemove", onMouseMove);
+      document.documentElement.removeEventListener("mouseleave", onMouseLeave);
+      document.documentElement.removeEventListener(
+        "mouseenter",
+        onMouseEnterWindow,
+      );
+      window.removeEventListener("blur", onWindowBlur);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("mouseup", onUp);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
       observer.disconnect();
       // Clean up select events
       const selects = document.querySelectorAll("select");

@@ -12,7 +12,7 @@ export async function GET() {
     const resenas = await query(
       `SELECT r.id, r.producto_id, r.usuario_id, r.calificacion, r.comentario, r.aprobada, r.creado_en,
               p.nombre as producto_nombre, u.nombre as usuario_nombre, u.apellido as usuario_apellido
-       FROM reseñas r
+       FROM resenas r
        JOIN productos p ON r.producto_id = p.id
        JOIN usuarios u ON r.usuario_id = u.id
        ORDER BY r.creado_en DESC`,
@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     const { id, aprobada } = await req.json();
-    await execute("UPDATE reseñas SET aprobada = ? WHERE id = ?", [
+    await execute("UPDATE resenas SET aprobada = ? WHERE id = ?", [
       aprobada ? true : false,
       id,
     ]);

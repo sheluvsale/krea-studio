@@ -632,6 +632,78 @@ function StatCard({
   );
 }
 
+// Confirm Modal Component
+function ConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  variant = "danger",
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: "danger" | "warning" | "info";
+}) {
+  const variantStyles = {
+    danger: {
+      confirm: "bg-red-500 hover:bg-red-600 text-white",
+    },
+    warning: {
+      confirm: "bg-yellow-500 hover:bg-yellow-600 text-black",
+    },
+    info: {
+      confirm: "bg-blue-500 hover:bg-blue-600 text-white",
+    },
+  };
+
+  const handleConfirm = () => {
+    onConfirm();
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div
+        className="relative w-full max-w-md bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl shadow-2xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold mb-4">
+          {title}
+        </h3>
+        <p className="text-[#ccc] text-sm leading-relaxed mb-6">{message}</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-[#888] hover:text-white border border-[#1f1f1f] hover:border-[#333] rounded-lg transition-all bg-transparent cursor-pointer"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={handleConfirm}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${variantStyles[variant].confirm}`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminProductos({ searchQuery }: { searchQuery: string }) {
   const [productos, setProductos] = useState<Record<string, unknown>[]>([]);
   const [categorias, setCategorias] = useState<Record<string, unknown>[]>([]);
@@ -644,6 +716,15 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
     estado: "",
     categoria_id: "",
   });
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    productId: number | null;
+  }>({
+    isOpen: false,
+    productId: null,
+  });
+  const [imagenes, setImagenes] = useState<Record<string, unknown>[]>([]);
+  const [loadingImagenes, setLoadingImagenes] = useState(false);
 
   const filteredProductos = React.useMemo(() => {
     return productos.filter(
@@ -675,7 +756,7 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
     fetchCategorias();
   }, []);
 
-  const openEdit = (p: Record<string, unknown>) => {
+  const openEdit = async (p: Record<string, unknown>) => {
     setEditing(p);
     setEditForm({
       nombre: String(p.nombre || ""),
@@ -684,6 +765,19 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
       estado: String(p.estado || "borrador"),
       categoria_id: String(p.categoria_id || ""),
     });
+
+    // Cargar imágenes del producto
+    setLoadingImagenes(true);
+    try {
+      const res = await fetch(`/api/admin/product-images?productoId=${p.id}`);
+      const data = await res.json();
+      setImagenes(data.imagenes || []);
+    } catch (error) {
+      console.error("Error loading images:", error);
+      setImagenes([]);
+    } finally {
+      setLoadingImagenes(false);
+    }
   };
 
   const saveEdit = async (e: React.FormEvent) => {
@@ -707,9 +801,78 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
   };
 
   const eliminar = async (id: number) => {
-    if (!confirm("¿Eliminar este producto?")) return;
-    await fetch(`/api/admin/products?id=${id}`, { method: "DELETE" });
-    fetchProductos();
+    setDeleteConfirm({ isOpen: true, productId: id });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirm.productId) {
+      await fetch(`/api/admin/products?id=${deleteConfirm.productId}`, {
+        method: "DELETE",
+      });
+      fetchProductos();
+    }
+    setDeleteConfirm({ isOpen: false, productId: null });
+  };
+
+  const agregarImagen = async (url: string) => {
+    if (!editing?.id) return;
+    try {
+      await fetch("/api/admin/product-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productoId: editing.id,
+          url_imagen: url,
+          es_principal: imagenes.length === 0, // Primera imagen es principal
+        }),
+      });
+      // Recargar imágenes
+      const res = await fetch(
+        `/api/admin/product-images?productoId=${editing.id}`,
+      );
+      const data = await res.json();
+      setImagenes(data.imagenes || []);
+    } catch (error) {
+      console.error("Error adding image:", error);
+    }
+  };
+
+  const eliminarImagen = async (imagenId: number) => {
+    try {
+      await fetch(`/api/admin/product-images?id=${imagenId}`, {
+        method: "DELETE",
+      });
+      // Recargar imágenes
+      if (editing?.id) {
+        const res = await fetch(
+          `/api/admin/product-images?productoId=${editing.id}`,
+        );
+        const data = await res.json();
+        setImagenes(data.imagenes || []);
+      }
+    } catch (error) {
+      console.error("Error deleting image:", error);
+    }
+  };
+
+  const establecerPrincipal = async (imagenId: number) => {
+    try {
+      await fetch("/api/admin/product-images", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: imagenId, es_principal: true }),
+      });
+      // Recargar imágenes
+      if (editing?.id) {
+        const res = await fetch(
+          `/api/admin/product-images?productoId=${editing.id}`,
+        );
+        const data = await res.json();
+        setImagenes(data.imagenes || []);
+      }
+    } catch (error) {
+      console.error("Error setting principal image:", error);
+    }
   };
 
   if (loading) return <p className="text-[#888]">Cargando productos...</p>;
@@ -885,7 +1048,103 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
                   ))}
                 </select>
               </div>
-              <div className="flex gap-2 mt-2">
+
+              {/* Sección de imágenes */}
+              <div className="mt-6 pt-6 border-t border-[#1f1f1f]">
+                <label className="block text-xs text-[#888] uppercase tracking-[1.5px] mb-3 font-[family-name:var(--font-heading)]">
+                  Imágenes del Producto
+                </label>
+                {loadingImagenes ? (
+                  <p className="text-[#888] text-sm">Cargando imágenes...</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                      {imagenes.map((img: any) => (
+                        <div key={String(img.id)} className="relative group">
+                          <img
+                            src={String(img.url_imagen)}
+                            alt="Producto"
+                            className="w-full aspect-square object-cover rounded-lg border border-[#1f1f1f]"
+                          />
+                          {img.es_principal && (
+                            <div className="absolute top-2 left-2 bg-[#3b82f6] text-white text-[10px] px-2 py-1 rounded-full uppercase tracking-wider">
+                              Principal
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                            {!img.es_principal && (
+                              <button
+                                onClick={() =>
+                                  establecerPrincipal(Number(img.id))
+                                }
+                                className="p-2 bg-[#3b82f6] text-white rounded-lg hover:bg-[#60a5fa] transition-colors border-none cursor-pointer"
+                                title="Establecer como principal"
+                              >
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => eliminarImagen(Number(img.id))}
+                              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors border-none cursor-pointer"
+                              title="Eliminar imagen"
+                            >
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M18 6 6 18M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="URL de imagen"
+                        className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            agregarImagen((e.target as HTMLInputElement).value);
+                            (e.target as HTMLInputElement).value = "";
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          const input = e.currentTarget
+                            .previousElementSibling as HTMLInputElement;
+                          if (input?.value) {
+                            agregarImagen(input.value);
+                            input.value = "";
+                          }
+                        }}
+                        className="px-4 py-2 bg-[#3b82f6] text-white text-sm rounded-lg hover:bg-[#60a5fa] transition-colors border-none cursor-pointer"
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex gap-2 mt-6">
                 <button
                   type="submit"
                   className="flex-1 bg-[#ffffff] text-[#0a0a0a] px-6 py-2 text-[0.7rem] uppercase tracking-[2px] font-[family-name:var(--font-heading)] font-semibold transition-all hover:bg-[#d4d4d4] border-none cursor-pointer"
@@ -989,6 +1248,17 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
           {searchQuery ? "No se encontraron resultados." : "No hay productos."}
         </p>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, productId: null })}
+        onConfirm={handleDeleteConfirm}
+        title="Eliminar Producto"
+        message="¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   );
 }
@@ -1322,6 +1592,13 @@ function AdminCategorias({ searchQuery }: { searchQuery: string }) {
   const [categorias, setCategorias] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ nombre: "", slug: "" });
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    categoryId: number | null;
+  }>({
+    isOpen: false,
+    categoryId: null,
+  });
 
   const filteredCategorias = React.useMemo(() => {
     return categorias.filter(
@@ -1359,9 +1636,17 @@ function AdminCategorias({ searchQuery }: { searchQuery: string }) {
   };
 
   const eliminar = async (id: number) => {
-    if (!confirm("¿Eliminar esta categoría?")) return;
-    await fetch(`/api/admin/categories?id=${id}`, { method: "DELETE" });
-    fetchCategorias();
+    setDeleteConfirm({ isOpen: true, categoryId: id });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirm.categoryId) {
+      await fetch(`/api/admin/categories?id=${deleteConfirm.categoryId}`, {
+        method: "DELETE",
+      });
+      fetchCategorias();
+    }
+    setDeleteConfirm({ isOpen: false, categoryId: null });
   };
 
   if (loading) return <p className="text-[#888]">Cargando categorías...</p>;
@@ -1433,6 +1718,17 @@ function AdminCategorias({ searchQuery }: { searchQuery: string }) {
           {searchQuery ? "No se encontraron resultados." : "No hay categorías."}
         </p>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, categoryId: null })}
+        onConfirm={handleDeleteConfirm}
+        title="Eliminar Categoría"
+        message="¿Estás seguro de que deseas eliminar esta categoría? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   );
 }

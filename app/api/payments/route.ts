@@ -18,7 +18,10 @@ export async function GET() {
     return NextResponse.json(metodos_pago);
   } catch (error) {
     console.error("Payments fetch error:", error);
-    return NextResponse.json({ error: "Error al cargar métodos de pago." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al cargar métodos de pago." },
+      { status: 500 },
+    );
   }
 }
 
@@ -30,25 +33,72 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { tipo, nombre, numero_tarjeta, titular, fecha_expiracion, es_default } = body;
+    const {
+      tipo,
+      nombre,
+      numero_tarjeta,
+      numero_tarjeta_mask,
+      titular,
+      fecha_expiracion,
+      tipo_tarjeta,
+      email_paypal,
+      es_default,
+    } = body;
+
+    if (!["tarjeta", "paypal"].includes(tipo)) {
+      return NextResponse.json(
+        { error: "Tipo de pago no válido. Solo tarjeta o PayPal." },
+        { status: 400 },
+      );
+    }
+
+    if (tipo === "tarjeta") {
+      if (!nombre || !titular || !fecha_expiracion || !numero_tarjeta) {
+        return NextResponse.json(
+          { error: "Faltan datos de la tarjeta." },
+          { status: 400 },
+        );
+      }
+    } else if (tipo === "paypal") {
+      if (!email_paypal) {
+        return NextResponse.json(
+          { error: "El email de PayPal es requerido." },
+          { status: 400 },
+        );
+      }
+    }
 
     // If setting as default, remove default from other payment methods
     if (es_default) {
       await execute(
         "UPDATE metodos_pago_usuario SET es_default = false WHERE usuario_id = ?",
-        [user.userId]
+        [user.userId],
       );
     }
 
     const result = await execute(
-      `INSERT INTO metodos_pago_usuario (usuario_id, tipo, nombre, numero_tarjeta, titular, fecha_expiracion, es_default, activo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, true)`,
-      [user.userId, tipo, nombre, numero_tarjeta || null, titular || null, fecha_expiracion || null, es_default || false]
+      `INSERT INTO metodos_pago_usuario (usuario_id, tipo, nombre, numero_tarjeta, numero_tarjeta_mask, titular, fecha_expiracion, tipo_tarjeta, email_paypal, es_default, activo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true)`,
+      [
+        user.userId,
+        tipo,
+        nombre,
+        tipo === "tarjeta" ? numero_tarjeta || null : null,
+        tipo === "tarjeta" ? numero_tarjeta_mask || null : null,
+        tipo === "tarjeta" ? titular || null : null,
+        tipo === "tarjeta" ? fecha_expiracion || null : null,
+        tipo === "tarjeta" ? tipo_tarjeta || null : null,
+        tipo === "paypal" ? email_paypal || null : null,
+        es_default || false,
+      ],
     );
 
     return NextResponse.json({ success: true, id: result.insertId });
   } catch (error) {
     console.error("Payment method creation error:", error);
-    return NextResponse.json({ error: "Error al crear método de pago." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al crear método de pago." },
+      { status: 500 },
+    );
   }
 }

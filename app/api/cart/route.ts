@@ -38,16 +38,33 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user?.userId) {
-    return NextResponse.json(
-      { error: "Debes iniciar sesión." },
-      { status: 401 },
-    );
-  }
-
   try {
-    const { producto_id, cantidad, talla } = await req.json();
+    const user = await getCurrentUser();
+    if (!user?.userId) {
+      console.error("Cart POST: User not authenticated");
+      return NextResponse.json(
+        { error: "Debes iniciar sesión." },
+        { status: 401 },
+      );
+    }
+
+    const body = await req.json();
+    const { producto_id, cantidad, talla } = body;
+
+    console.log("Cart POST request:", {
+      userId: user.userId,
+      producto_id,
+      cantidad,
+      talla,
+    });
+
+    if (!producto_id) {
+      console.error("Cart POST: Missing producto_id");
+      return NextResponse.json(
+        { error: "producto_id es requerido." },
+        { status: 400 },
+      );
+    }
 
     const producto = await queryOne(
       "SELECT nombre, precio_base FROM productos WHERE id = ?",
@@ -55,6 +72,7 @@ export async function POST(req: NextRequest) {
     );
 
     if (!producto) {
+      console.error("Cart POST: Product not found", producto_id);
       return NextResponse.json(
         { error: "Producto no encontrado." },
         { status: 404 },
@@ -67,10 +85,18 @@ export async function POST(req: NextRequest) {
     const qty = cantidad || 1;
     const tallaValor = talla || null;
 
-    const existing = await queryOne(
-      "SELECT id, cantidad FROM carrito WHERE usuario_id = ? AND producto_id = ? AND (talla = ? OR (talla IS NULL AND ? IS NULL))",
-      [user.userId, producto_id, tallaValor, tallaValor],
-    );
+    let existing = null;
+    if (tallaValor) {
+      existing = await queryOne(
+        "SELECT id, cantidad FROM carrito WHERE usuario_id = ? AND producto_id = ? AND talla = ?",
+        [user.userId, producto_id, tallaValor],
+      );
+    } else {
+      existing = await queryOne(
+        "SELECT id, cantidad FROM carrito WHERE usuario_id = ? AND producto_id = ? AND talla IS NULL",
+        [user.userId, producto_id],
+      );
+    }
 
     if (existing) {
       const ex = existing as Record<string, unknown>;
@@ -78,6 +104,7 @@ export async function POST(req: NextRequest) {
         Number(ex.cantidad) + qty,
         Number(ex.id),
       ]);
+      console.log("Cart POST: Updated existing item");
     } else {
       await execute(
         "INSERT INTO carrito (usuario_id, producto_id, nombre_producto, cantidad, precio_unitario, talla) VALUES (?, ?, ?, ?, ?, ?)",
@@ -90,6 +117,7 @@ export async function POST(req: NextRequest) {
           tallaValor,
         ],
       );
+      console.log("Cart POST: Inserted new item");
     }
 
     return NextResponse.json({ success: true });

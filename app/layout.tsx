@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
+import ThemeProvider from "./components/ThemeProvider";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-heading",
@@ -29,9 +30,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang="es" suppressHydrationWarning>
       <head></head>
-      <body>{children}</body>
+      <body className={`${spaceGrotesk.variable} ${inter.variable}`}>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

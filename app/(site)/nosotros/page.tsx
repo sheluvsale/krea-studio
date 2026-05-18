@@ -1,12 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 
-export const metadata = {
-  title: "Sobre Nosotros | Krea Streetwear",
-  description:
-    "Conoce la historia de Krea. Streetwear premium nacido de la creatividad y la autenticidad.",
-};
-
 export default function NosotrosPage() {
   return (
     <>

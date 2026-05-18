@@ -11,13 +11,15 @@ export interface SessionData {
 }
 
 const sessionOptions = {
-  password: process.env.SESSION_SECRET || "krea-default-secret-change-this-in-production-2026",
+  password:
+    process.env.SESSION_SECRET ||
+    "krea-default-secret-change-this-in-production-2026",
   cookieName: "krea_session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: "lax" as const,
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
   },
 };
 

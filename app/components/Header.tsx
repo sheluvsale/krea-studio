@@ -25,7 +25,7 @@ export default function Header() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 100);
+    const onScroll = () => setScrolled(window.scrollY > 30);
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
@@ -61,6 +61,19 @@ export default function Header() {
     const onCartUpdate = () => fetchCartCount();
     window.addEventListener("cart-updated", onCartUpdate);
     return () => window.removeEventListener("cart-updated", onCartUpdate);
+  }, []);
+
+  useEffect(() => {
+    const onProfileUpdate = () => {
+      fetch("/api/auth/me")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.user?.isLoggedIn) setUser(d.user);
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("profile-updated", onProfileUpdate);
+    return () => window.removeEventListener("profile-updated", onProfileUpdate);
   }, []);
 
   const isActive = (path: string) => pathname === path;
@@ -198,7 +211,7 @@ export default function Header() {
                     <span className={`${navLinkBase} cursor-pointer`}>
                       {user.nombre}
                     </span>
-                    <ul className="absolute top-full left-1/2 -translate-x-1/2 bg-[#141414] min-w-[220px] py-2 opacity-0 invisible flex-col gap-0 border border-[#2a2a2a] rounded-lg mt-4 transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.4)] z-[10000] overflow-hidden group-hover:opacity-100 group-hover:visible group-hover:mt-2">
+                    <ul className="absolute top-full left-1/2 -translate-x-1/2 bg-[rgba(10,10,10,0.75)] backdrop-blur-xl backdrop-saturate-[180%] min-w-[220px] py-2 opacity-0 invisible flex-col gap-0 border border-[rgba(255,255,255,0.1)] mt-4 transition-all duration-300 shadow-[0_20px_60px_rgba(0,0,0,0.5)] z-[10000] overflow-hidden group-hover:opacity-100 group-hover:visible group-hover:mt-2">
                       <li className="w-full">
                         <Link
                           href="/dashboard"
@@ -401,7 +414,7 @@ export default function Header() {
                 >
                   Carrito
                   {cartCount > 0 && (
-                    <span className="inline-flex items-center justify-center w-5 h-5 bg-[#ffffff] text-[#0a0a0a] text-[0.65rem] font-bold rounded-full ml-1.5">
+                    <span className="inline-flex items-center justify-center w-5 h-5 bg-[#ffffff] text-[#0a0a0a] text-[0.65rem] font-bold ml-1.5">
                       {cartCount}
                     </span>
                   )}

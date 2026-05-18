@@ -20,10 +20,36 @@ export async function PUT(
       tipo,
       nombre,
       numero_tarjeta,
+      numero_tarjeta_mask,
       titular,
       fecha_expiracion,
+      tipo_tarjeta,
+      email_paypal,
       es_default,
     } = body;
+
+    if (!["tarjeta", "paypal"].includes(tipo)) {
+      return NextResponse.json(
+        { error: "Tipo de pago no válido. Solo tarjeta o PayPal." },
+        { status: 400 },
+      );
+    }
+
+    if (tipo === "tarjeta") {
+      if (!nombre || !titular || !fecha_expiracion || !numero_tarjeta) {
+        return NextResponse.json(
+          { error: "Faltan datos de la tarjeta." },
+          { status: 400 },
+        );
+      }
+    } else if (tipo === "paypal") {
+      if (!email_paypal) {
+        return NextResponse.json(
+          { error: "El email de PayPal es requerido." },
+          { status: 400 },
+        );
+      }
+    }
 
     // Check if payment method belongs to user
     const payment = await queryOne(
@@ -47,14 +73,17 @@ export async function PUT(
     }
 
     await execute(
-      `UPDATE metodos_pago_usuario SET tipo = ?, nombre = ?, numero_tarjeta = ?, titular = ?, fecha_expiracion = ?, es_default = ?, actualizado_en = CURRENT_TIMESTAMP
+      `UPDATE metodos_pago_usuario SET tipo = ?, nombre = ?, numero_tarjeta = ?, numero_tarjeta_mask = ?, titular = ?, fecha_expiracion = ?, tipo_tarjeta = ?, email_paypal = ?, es_default = ?, actualizado_en = CURRENT_TIMESTAMP
        WHERE id = ?`,
       [
         tipo,
         nombre,
-        numero_tarjeta || null,
-        titular || null,
-        fecha_expiracion || null,
+        tipo === "tarjeta" ? numero_tarjeta || null : null,
+        tipo === "tarjeta" ? numero_tarjeta_mask || null : null,
+        tipo === "tarjeta" ? titular || null : null,
+        tipo === "tarjeta" ? fecha_expiracion || null : null,
+        tipo === "tarjeta" ? tipo_tarjeta || null : null,
+        tipo === "paypal" ? email_paypal || null : null,
         es_default || false,
         paymentId,
       ],

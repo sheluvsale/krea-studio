@@ -1,7 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useHelpModals } from "./HelpModals";
 
 export default function Footer() {
+  const { isOpen, openModal, closeModal, modalType, HelpModalsComponent } =
+    useHelpModals();
+
   return (
     <footer className="bg-[#0a0a0a] border-t border-[#2a2a2a]">
       <div className="max-w-[1600px] mx-auto px-[5%] py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 min-h-[40vh]">
@@ -73,28 +79,28 @@ export default function Footer() {
               </Link>
             </li>
             <li>
-              <Link
-                href="#"
-                className="text-[#888] text-sm hover:text-white transition-colors"
+              <button
+                onClick={() => openModal("size")}
+                className="text-[#888] text-sm hover:text-white transition-colors bg-transparent border-none cursor-pointer"
               >
                 Guía de Tallas
-              </Link>
+              </button>
             </li>
             <li>
-              <Link
-                href="#"
-                className="text-[#888] text-sm hover:text-white transition-colors"
+              <button
+                onClick={() => openModal("shipping")}
+                className="text-[#888] text-sm hover:text-white transition-colors bg-transparent border-none cursor-pointer"
               >
                 Envíos
-              </Link>
+              </button>
             </li>
             <li>
-              <Link
-                href="#"
-                className="text-[#888] text-sm hover:text-white transition-colors"
+              <button
+                onClick={() => openModal("returns")}
+                className="text-[#888] text-sm hover:text-white transition-colors bg-transparent border-none cursor-pointer"
               >
                 Devoluciones
-              </Link>
+              </button>
             </li>
           </ul>
         </div>
@@ -114,7 +120,7 @@ export default function Footer() {
             </li>
             <li>
               <Link
-                href="#"
+                href="/sostenibilidad"
                 className="text-[#888] text-sm hover:text-white transition-colors"
               >
                 Sostenibilidad
@@ -122,7 +128,7 @@ export default function Footer() {
             </li>
             <li>
               <Link
-                href="#"
+                href="/terminos"
                 className="text-[#888] text-sm hover:text-white transition-colors"
               >
                 Términos y Condiciones
@@ -130,7 +136,7 @@ export default function Footer() {
             </li>
             <li>
               <Link
-                href="#"
+                href="/privacidad"
                 className="text-[#888] text-sm hover:text-white transition-colors"
               >
                 Política de Privacidad
@@ -143,18 +149,22 @@ export default function Footer() {
       <div className="border-t border-[#2a2a2a]">
         <div className="max-w-[1600px] mx-auto px-[5%] py-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[#888] text-xs">
-            &copy; 2026 Krea Streetwear. Todos los derechos reservados.
+            &copy; 2026 Krea Studio. Todos los derechos reservados.
           </p>
           <div className="flex gap-6">
             <a
-              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              href="https://www.instagram.com/krea.studio.shop/"
               aria-label="Instagram"
               className="text-[#888] text-xs uppercase tracking-[2px] hover:text-white transition-colors"
             >
               Instagram
             </a>
             <a
-              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              href="https://www.tiktok.com/@krea.studio.shop"
               aria-label="TikTok"
               className="text-[#888] text-xs uppercase tracking-[2px] hover:text-white transition-colors"
             >
@@ -163,6 +173,9 @@ export default function Footer() {
           </div>
         </div>
       </div>
+
+      {/* Help Modals */}
+      <HelpModalsComponent />
     </footer>
   );
 }

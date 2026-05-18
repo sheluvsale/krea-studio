@@ -37,7 +37,7 @@ export async function GET(
 
     const resenas = await query(
       `SELECT r.*, u.nombre as usuario_nombre, u.url_avatar
-       FROM reseñas r JOIN usuarios u ON r.usuario_id = u.id
+       FROM resenas r JOIN usuarios u ON r.usuario_id = u.id
        WHERE r.producto_id = ? AND r.aprobada = TRUE ORDER BY r.creado_en DESC`,
       [(producto as Record<string, unknown>).id as number],
     );

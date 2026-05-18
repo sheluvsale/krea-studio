@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     if (!nombre || !apellido || !correo || !contrasena) {
       return NextResponse.json(
         { error: "Por favor, completa todos los campos obligatorios." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -18,40 +18,40 @@ export async function POST(req: NextRequest) {
     if (!emailRegex.test(correo)) {
       return NextResponse.json(
         { error: "El correo electrónico no es válido." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (contrasena.length < 6) {
       return NextResponse.json(
         { error: "La contraseña debe tener al menos 6 caracteres." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (contrasena !== confirmar) {
       return NextResponse.json(
         { error: "Las contraseñas no coinciden." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const existing = await queryOne(
       "SELECT id FROM usuarios WHERE correo = ?",
-      [correo]
+      [correo],
     );
 
     if (existing) {
       return NextResponse.json(
         { error: "Este correo ya está registrado." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     const hash = bcrypt.hashSync(contrasena, 10);
     await execute(
       "INSERT INTO usuarios (nombre, apellido, correo, telefono, contrasena_hash, rol) VALUES (?, ?, ?, ?, ?, 'cliente')",
-      [nombre, apellido, correo, telefono || null, hash]
+      [nombre, apellido, correo, telefono || null, hash],
     );
 
     return NextResponse.json({
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     console.error("Signup error:", error);
     return NextResponse.json(
       { error: "Error al crear la cuenta." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -18,7 +18,10 @@ export async function GET() {
     return NextResponse.json(direcciones);
   } catch (error) {
     console.error("Addresses fetch error:", error);
-    return NextResponse.json({ error: "Error al cargar direcciones." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al cargar direcciones." },
+      { status: 500 },
+    );
   }
 }
 
@@ -30,25 +33,51 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { etiqueta, nombre_destinatario, telefono_destinatario, pais, ciudad, estado, codigo_postal, linea_1, linea_2, predeterminada } = body;
+    const {
+      etiqueta,
+      nombre_destinatario,
+      telefono_destinatario,
+      pais,
+      ciudad,
+      estado,
+      codigo_postal,
+      linea_1,
+      linea_2,
+      predeterminada,
+    } = body;
 
     // If setting as default, remove default from other addresses
     if (predeterminada) {
       await execute(
         "UPDATE direcciones SET predeterminada = false WHERE usuario_id = ?",
-        [user.userId]
+        [user.userId],
       );
     }
 
     const result = await execute(
       `INSERT INTO direcciones (usuario_id, etiqueta, nombre_destinatario, telefono_destinatario, pais, ciudad, estado, codigo_postal, linea_1, linea_2, predeterminada)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [user.userId, etiqueta || null, nombre_destinatario, telefono_destinatario || null, pais, ciudad, estado, codigo_postal, linea_1, linea_2 || null, predeterminada || false]
+      [
+        user.userId,
+        etiqueta || null,
+        nombre_destinatario,
+        telefono_destinatario || null,
+        pais,
+        ciudad,
+        estado,
+        codigo_postal,
+        linea_1,
+        linea_2 || null,
+        predeterminada || false,
+      ],
     );
 
     return NextResponse.json({ success: true, id: result.insertId });
   } catch (error) {
     console.error("Address creation error:", error);
-    return NextResponse.json({ error: "Error al crear dirección." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al crear dirección." },
+      { status: 500 },
+    );
   }
 }

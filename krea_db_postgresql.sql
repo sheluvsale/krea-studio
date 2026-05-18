@@ -13,6 +13,7 @@ CREATE TYPE cupon_tipo_descuento AS ENUM ('porcentaje', 'fijo', 'envio_gratis');
 CREATE TYPE cupon_aplicable_a AS ENUM ('todos', 'categorias', 'productos');
 CREATE TYPE factura_estado AS ENUM ('pendiente', 'pagada', 'vencida', 'cancelada', 'parcial');
 CREATE TYPE metodo_pago_tipo AS ENUM ('tarjeta', 'transferencia', 'efectivo', 'mercadopago', 'stripe');
+CREATE TYPE usuario_metodo_pago_tipo AS ENUM ('tarjeta', 'paypal');
 CREATE TYPE movimiento_tipo AS ENUM ('entrada', 'salida', 'ajuste', 'transferencia', 'devolucion');
 CREATE TYPE proveedor_condiciones AS ENUM ('contado', '15_dias', '30_dias', '60_dias', '90_dias');
 CREATE TYPE transaccion_tipo AS ENUM ('ingreso', 'egreso');
@@ -304,14 +305,30 @@ CREATE TABLE metodos_pago_config (
 CREATE TABLE metodos_pago_usuario (
     id SERIAL PRIMARY KEY,
     usuario_id INTEGER NOT NULL,
-    tipo metodo_pago_tipo NOT NULL DEFAULT 'tarjeta',
+    tipo usuario_metodo_pago_tipo NOT NULL DEFAULT 'tarjeta',
     nombre VARCHAR(100) NOT NULL,
     numero_tarjeta VARCHAR(20) DEFAULT NULL,
+    numero_tarjeta_mask VARCHAR(20) DEFAULT NULL,
     titular VARCHAR(255) DEFAULT NULL,
     fecha_expiracion VARCHAR(10) DEFAULT NULL,
+    tipo_tarjeta VARCHAR(20) DEFAULT NULL,
+    email_paypal VARCHAR(255) DEFAULT NULL,
     es_default BOOLEAN NOT NULL DEFAULT FALSE,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     token_pago VARCHAR(255) DEFAULT NULL,
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP DEFAULT NULL
+);
+
+CREATE TABLE preferencias_usuario (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER NOT NULL UNIQUE,
+    notificaciones_email BOOLEAN NOT NULL DEFAULT TRUE,
+    notificaciones_push BOOLEAN NOT NULL DEFAULT FALSE,
+    newsletter BOOLEAN NOT NULL DEFAULT FALSE,
+    idioma VARCHAR(10) NOT NULL DEFAULT 'es',
+    moneda VARCHAR(10) NOT NULL DEFAULT 'DOP',
+    tema VARCHAR(20) NOT NULL DEFAULT 'dark',
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP DEFAULT NULL
 );
@@ -402,6 +419,7 @@ CREATE INDEX idx_items_variante_id ON items_pedido(variante_id);
 CREATE INDEX idx_items_vendedor_id ON items_pedido(vendedor_id);
 CREATE INDEX idx_metodos_pago_usuario_id ON metodos_pago_usuario(usuario_id);
 CREATE INDEX idx_metodos_pago_tipo ON metodos_pago_usuario(tipo);
+CREATE INDEX idx_preferencias_usuario_id ON preferencias_usuario(usuario_id);
 CREATE INDEX idx_movimientos_producto_id ON movimientos_inventario(producto_id);
 CREATE INDEX idx_movimientos_variante_id ON movimientos_inventario(variante_id);
 CREATE INDEX idx_movimientos_tipo ON movimientos_inventario(tipo);
@@ -446,6 +464,7 @@ ALTER TABLE items_pedido ADD CONSTRAINT items_pedido_pedido_fk FOREIGN KEY (pedi
 ALTER TABLE items_pedido ADD CONSTRAINT items_pedido_variante_fk FOREIGN KEY (variante_id) REFERENCES variantes_producto(id);
 ALTER TABLE items_pedido ADD CONSTRAINT items_pedido_vendedor_fk FOREIGN KEY (vendedor_id) REFERENCES perfiles_vendedor(id);
 ALTER TABLE metodos_pago_usuario ADD CONSTRAINT metodos_pago_usuario_fk FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE preferencias_usuario ADD CONSTRAINT preferencias_usuario_fk FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE;
 ALTER TABLE movimientos_inventario ADD CONSTRAINT movimientos_inv_prod_fk FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE;
 ALTER TABLE movimientos_inventario ADD CONSTRAINT movimientos_inv_prov_fk FOREIGN KEY (proveedor_id) REFERENCES proveedores(id) ON DELETE SET NULL;
 ALTER TABLE movimientos_inventario ADD CONSTRAINT movimientos_inv_user_fk FOREIGN KEY (usuario_id) REFERENCES usuarios(id);
@@ -488,6 +507,10 @@ CREATE TRIGGER trg_metodos_pago_usuario_updated
 BEFORE UPDATE ON metodos_pago_usuario
 FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
+CREATE TRIGGER trg_preferencias_usuario_updated
+BEFORE UPDATE ON preferencias_usuario
+FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
 CREATE TRIGGER trg_diseños_usuario_updated
 BEFORE UPDATE ON "diseños_usuario"
 FOR EACH ROW EXECUTE FUNCTION update_timestamp();
@@ -507,7 +530,14 @@ COMMENT ON COLUMN metodos_pago_usuario.numero_tarjeta IS 'Últimos 4 dígitos pa
 COMMENT ON COLUMN metodos_pago_usuario.titular IS 'Nombre del titular';
 COMMENT ON COLUMN metodos_pago_usuario.fecha_expiracion IS 'MM/YY';
 COMMENT ON COLUMN metodos_pago_usuario.es_default IS '1 = método de pago predeterminado';
+COMMENT ON COLUMN metodos_pago_usuario.numero_tarjeta IS 'Últimos 4 dígitos para tarjetas';
+COMMENT ON COLUMN metodos_pago_usuario.numero_tarjeta_mask IS 'Máscara completa ****1234';
+COMMENT ON COLUMN metodos_pago_usuario.tipo_tarjeta IS 'visa, mastercard, amex';
+COMMENT ON COLUMN metodos_pago_usuario.email_paypal IS 'Email de cuenta PayPal asociada';
 COMMENT ON COLUMN metodos_pago_usuario.token_pago IS 'Token seguro del proveedor de pagos';
+COMMENT ON COLUMN preferencias_usuario.idioma IS 'es, en, etc.';
+COMMENT ON COLUMN preferencias_usuario.moneda IS 'DOP, USD, MXN, etc.';
+COMMENT ON COLUMN preferencias_usuario.tema IS 'dark, light, system';
 COMMENT ON COLUMN movimientos_inventario.referencia IS 'N° orden, factura, etc.';
 COMMENT ON COLUMN movimientos_inventario.proveedor_id IS 'Si es entrada de proveedor';
 COMMENT ON COLUMN movimientos_inventario.usuario_id IS 'Quien realizó el movimiento';

@@ -10,7 +10,7 @@ export async function GET() {
 
   try {
     const usuario = await queryOne(
-      "SELECT telefono, url_avatar, creado_en FROM usuarios WHERE id = ?",
+      "SELECT telefono, url_avatar as avatar_url, creado_en FROM usuarios WHERE id = ?",
       [user.userId],
     );
 
@@ -26,8 +26,14 @@ export async function GET() {
     );
 
     const metodos_pago = await query(
-      `SELECT id, tipo, nombre, numero_tarjeta, titular, fecha_expiracion, es_default, activo
+      `SELECT id, tipo, nombre, numero_tarjeta, numero_tarjeta_mask, titular, fecha_expiracion, tipo_tarjeta, email_paypal, es_default, activo
        FROM metodos_pago_usuario WHERE usuario_id = ? AND activo = true ORDER BY es_default DESC, creado_en DESC`,
+      [user.userId],
+    );
+
+    const preferencias = await queryOne(
+      `SELECT notificaciones_email, notificaciones_push, newsletter, idioma, moneda, tema
+       FROM preferencias_usuario WHERE usuario_id = ?`,
       [user.userId],
     );
 
@@ -42,6 +48,14 @@ export async function GET() {
       pedidos,
       direcciones,
       metodos_pago,
+      preferencias: preferencias || {
+        notificaciones_email: true,
+        notificaciones_push: false,
+        newsletter: false,
+        idioma: "es",
+        moneda: "DOP",
+        tema: "dark",
+      },
     };
 
     if (["vendedor", "admin"].includes(user.rol || "")) {

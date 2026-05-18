@@ -108,7 +108,7 @@ export default function ContactoPage() {
               Email
             </h4>
             <p className="text-[#888] text-sm leading-relaxed">
-              hola@kreastreetwear.com
+              kreastudio.business1604@gmail.com
               <br />
               Respuesta en 24-48 horas
             </p>
@@ -129,11 +129,7 @@ export default function ContactoPage() {
             <h4 className="font-[family-name:var(--font-heading)] text-sm uppercase tracking-[2px] mb-3">
               Teléfono
             </h4>
-            <p className="text-[#888] text-sm leading-relaxed">
-              +52 (55) 1234-5678
-              <br />
-              Lun-Vie: 9:00 - 18:00
-            </p>
+            <p className="text-[#888] text-sm leading-relaxed">809-750-6092</p>
           </div>
           <div className="text-center reveal">
             <div className="text-[#ffffff] text-2xl mb-4 flex justify-center">
@@ -153,7 +149,7 @@ export default function ContactoPage() {
               Ubicación
             </h4>
             <p className="text-[#888] text-sm leading-relaxed">
-              Ciudad de México, México
+              La Vega, República Dominicana
               <br />
               Envíos a todo el país
             </p>
@@ -177,7 +173,7 @@ export default function ContactoPage() {
               Instagram
             </h4>
             <p className="text-[#888] text-sm leading-relaxed">
-              @kreastreetwear
+              @krea.studio.shop
               <br />
               Síguenos para novedades
             </p>
