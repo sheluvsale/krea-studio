@@ -19,7 +19,18 @@ export default function ContactoPage() {
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => {
-        if (d.user?.isLoggedIn) setUserRol(d.user.rol || "");
+        if (d.user?.isLoggedIn) {
+          setUserRol(d.user.rol || "");
+          const nombreCompleto = [d.user.nombre, d.user.apellido]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+          setForm((prev) => ({
+            ...prev,
+            nombre: prev.nombre || nombreCompleto,
+            email: prev.email || d.user.correo || "",
+          }));
+        }
       })
       .catch(() => {});
   }, []);

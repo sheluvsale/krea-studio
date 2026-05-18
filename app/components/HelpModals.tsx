@@ -5,6 +5,22 @@ import { X, Ruler, Truck, RotateCcw } from "lucide-react";
 
 type ModalType = "size" | "shipping" | "returns" | null;
 
+interface Section {
+  subtitle: string;
+  description?: string;
+  table?: {
+    headers: string[];
+    rows: string[][];
+  };
+  items?: string[];
+}
+
+interface ModalData {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  content: Section[];
+}
+
 interface HelpModalsProps {
   isOpen: boolean;
   onClose: () => void;
@@ -139,8 +155,7 @@ const returnsData = {
   ],
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const modalData: Record<Exclude<ModalType, null>, any> = {
+const modalData: Record<Exclude<ModalType, null>, ModalData> = {
   size: sizeGuideData,
   shipping: shippingData,
   returns: returnsData,
@@ -200,20 +215,22 @@ export default function HelpModals({ isOpen, onClose, type }: HelpModalsProps) {
                   <table className="w-full text-sm">
                     <thead className="bg-[#1a1a1a]">
                       <tr>
-                        {section.table.headers.map((header, i) => (
-                          <th
-                            key={i}
-                            className="text-left p-3 text-xs uppercase tracking-[1.5px] text-[#888] font-[family-name:var(--font-heading)]"
-                          >
-                            {header}
-                          </th>
-                        ))}
+                        {section.table.headers.map(
+                          (header: string, i: number) => (
+                            <th
+                              key={i}
+                              className="text-left p-3 text-xs uppercase tracking-[1.5px] text-[#888] font-[family-name:var(--font-heading)]"
+                            >
+                              {header}
+                            </th>
+                          ),
+                        )}
                       </tr>
                     </thead>
                     <tbody>
-                      {section.table.rows.map((row, i) => (
+                      {section.table.rows.map((row: string[], i: number) => (
                         <tr key={i} className="border-t border-[#2a2a2a]">
-                          {row.map((cell, j) => (
+                          {row.map((cell: string, j: number) => (
                             <td
                               key={j}
                               className={`p-3 ${j === 0 ? "font-medium text-white" : "text-[#888]"}`}
@@ -230,7 +247,7 @@ export default function HelpModals({ isOpen, onClose, type }: HelpModalsProps) {
 
               {section.items && (
                 <ul className="space-y-2">
-                  {section.items.map((item, i) => (
+                  {section.items.map((item: string, i: number) => (
                     <li
                       key={i}
                       className="text-[#d4d4d4] text-sm leading-relaxed flex items-start gap-3"

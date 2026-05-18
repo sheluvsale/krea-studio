@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execute, queryOne } from "@/app/lib/db";
-import { getCurrentUser } from "@/app/lib/session";
+import { getCurrentUser, getSession } from "@/app/lib/session";
 
 export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
@@ -36,11 +36,27 @@ export async function PUT(req: NextRequest) {
     }
 
     // Devolver los datos actualizados
-    const updatedUser = await queryOne(
+    const updatedUser = await queryOne<{
+      id: number;
+      nombre: string;
+      apellido: string;
+      telefono: string | null;
+      correo: string;
+      rol: string;
+    }>(
       "SELECT id, nombre, apellido, telefono, correo, rol FROM usuarios WHERE id = ?",
       [user.userId],
     );
     console.log("Profile update - Updated user:", updatedUser);
+
+    // Actualizar la sesión para que getCurrentUser() devuelva datos frescos
+    // en futuros requests (sino el dashboard mostraría valores cacheados).
+    if (updatedUser) {
+      const session = await getSession();
+      session.nombre = updatedUser.nombre;
+      session.apellido = updatedUser.apellido;
+      await session.save();
+    }
 
     return NextResponse.json({ success: true, usuario: updatedUser });
   } catch (error) {

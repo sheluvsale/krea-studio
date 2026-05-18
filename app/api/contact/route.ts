@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execute } from "@/app/lib/db";
-
-const BUSINESS_EMAIL = "kreastudio.business1604@gmail.com";
+import { sendEmail, BUSINESS_EMAIL } from "@/app/lib/email";
+import { getCurrentUser } from "@/app/lib/session";
 
 // Email template for business notification
 function getBusinessEmailTemplate(data: {
@@ -161,38 +161,6 @@ function getCustomerEmailTemplate(data: { nombre: string; asunto: string }) {
 </html>`;
 }
 
-async function sendEmail({
-  to,
-  subject,
-  html,
-  replyTo,
-}: {
-  to: string;
-  subject: string;
-  html: string;
-  replyTo?: string;
-}) {
-  // For now, we'll log the email. In production, integrate with:
-  // - SendGrid
-  // - AWS SES
-  // - Resend
-  // - Hostinger Email (when ready)
-
-  console.log("[EMAIL] Sending email:");
-  console.log("  To:", to);
-  console.log("  Subject:", subject);
-  console.log("  Reply-To:", replyTo);
-  console.log("  HTML length:", html.length);
-
-  // TODO: Implement actual email sending when email service is configured
-  // Example with SendGrid:
-  // const sgMail = require('@sendgrid/mail');
-  // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  // await sgMail.send({ to, from: BUSINESS_EMAIL, subject, html, replyTo });
-
-  return true;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -214,47 +182,67 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Store in database
-    await execute(`
-      CREATE TABLE IF NOT EXISTS mensajes_contacto (
-        id SERIAL PRIMARY KEY,
-        nombre VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        asunto VARCHAR(100) NOT NULL,
-        mensaje TEXT NOT NULL,
-        leido BOOLEAN NOT NULL DEFAULT FALSE,
-        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    // Si hay sesión, asociamos el mensaje al usuario.
+    const currentUser = await getCurrentUser();
+    const usuarioId = currentUser?.userId ?? null;
+
+    // 1) Guardar en DB. Si falla aquí, devolvemos 500 con detalle (es el error
+    //    más probable: tabla inexistente).
+    try {
+      await execute(
+        `INSERT INTO mensajes_contacto (usuario_id, nombre, email, asunto, mensaje)
+         VALUES (?, ?, ?, ?, ?)`,
+        [usuarioId, nombre, email, asunto, mensaje],
       );
-    `);
+    } catch (dbErr) {
+      console.error("Contact DB insert error:", dbErr);
+      const detail =
+        process.env.NODE_ENV !== "production"
+          ? ` (${(dbErr as Error).message})`
+          : "";
+      return NextResponse.json(
+        { error: `Error al guardar el mensaje.${detail}` },
+        { status: 500 },
+      );
+    }
 
-    await execute(
-      `INSERT INTO mensajes_contacto (nombre, email, asunto, mensaje) VALUES (?, ?, ?, ?)`,
-      [nombre, email, asunto, mensaje],
-    );
+    // 2) Enviar correos. No lanzan: sendEmail captura sus propios errores.
+    //    Si algún proveedor falla, lo registramos pero devolvemos éxito porque
+    //    el mensaje ya está guardado y el admin lo verá en su panel.
+    const [businessRes, clientRes] = await Promise.all([
+      sendEmail({
+        to: BUSINESS_EMAIL,
+        subject: `Nuevo mensaje: ${asunto} - ${nombre}`,
+        html: getBusinessEmailTemplate({ nombre, email, asunto, mensaje }),
+        replyTo: email,
+      }),
+      sendEmail({
+        to: email,
+        subject: "Hemos recibido tu mensaje - Krea Studio",
+        html: getCustomerEmailTemplate({ nombre, asunto }),
+      }),
+    ]);
 
-    // Send notification email to business
-    await sendEmail({
-      to: BUSINESS_EMAIL,
-      subject: `Nuevo mensaje: ${asunto} - ${nombre}`,
-      html: getBusinessEmailTemplate({ nombre, email, asunto, mensaje }),
-      replyTo: email,
-    });
-
-    // Send confirmation email to customer
-    await sendEmail({
-      to: email,
-      subject: "Hemos recibido tu mensaje - Krea Studio",
-      html: getCustomerEmailTemplate({ nombre, asunto }),
-    });
+    if (!businessRes.success) {
+      console.warn("[contact] business email failed:", businessRes.error);
+    }
+    if (!clientRes.success) {
+      console.warn("[contact] client email failed:", clientRes.error);
+    }
 
     return NextResponse.json({
       success: true,
       message: "Mensaje enviado correctamente. Te responderemos pronto.",
+      emailDelivered: businessRes.success && clientRes.success,
     });
   } catch (error) {
     console.error("Contact POST error:", error);
+    const detail =
+      process.env.NODE_ENV !== "production"
+        ? ` (${(error as Error).message})`
+        : "";
     return NextResponse.json(
-      { error: "Error al enviar el mensaje. Intenta de nuevo." },
+      { error: `Error al enviar el mensaje.${detail}` },
       { status: 500 },
     );
   }

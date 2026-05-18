@@ -227,6 +227,21 @@ CREATE TABLE password_resets (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE mensajes_contacto (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER DEFAULT NULL REFERENCES usuarios(id) ON DELETE SET NULL,
+    nombre VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    asunto VARCHAR(100) NOT NULL,
+    mensaje TEXT NOT NULL,
+    leido BOOLEAN NOT NULL DEFAULT FALSE,
+    respondido BOOLEAN NOT NULL DEFAULT FALSE,
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_mensajes_contacto_creado_en ON mensajes_contacto (creado_en DESC);
+CREATE INDEX idx_mensajes_contacto_leido ON mensajes_contacto (leido);
+
 CREATE TABLE banners (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(255) NOT NULL,
