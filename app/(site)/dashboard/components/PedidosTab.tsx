@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, XCircle } from "lucide-react";
+import OrderChat from "../../../../components/OrderChat";
 import { Pedido } from "../types";
+import { useState } from "react";
 
 interface Props {
   pedidos: Pedido[];
@@ -17,19 +20,65 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function PedidosTab({ pedidos, moneda }: Props) {
+  const [cancelando, setCancelando] = useState<number | null>(null);
+  const [cancelMsg, setCancelMsg] = useState("");
+
   const formatPrice = (amount: number) => {
     return `$${amount.toFixed(2)}`;
   };
+
+  const puedeCancelar = (p: Pedido) => {
+    if (p.estado === "cancelado") return false;
+    const creado = new Date(p.creado_en);
+    const ahora = new Date();
+    return ahora.getTime() - creado.getTime() <= 60 * 60 * 1000;
+  };
+
+  const cancelar = async (id: number) => {
+    setCancelando(id);
+    setCancelMsg("");
+    try {
+      const res = await fetch("/api/pedidos/cancelar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pedido_id: id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCancelMsg("Pedido cancelado.");
+        window.location.reload();
+      } else {
+        setCancelMsg(data.error || "Error al cancelar.");
+      }
+    } catch {
+      setCancelMsg("Error de conexión.");
+    } finally {
+      setCancelando(null);
+    }
+  };
+
   return (
     <section>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-[family-name:var(--font-heading)] text-xl font-semibold tracking-[-0.3px]">
           Mis pedidos
         </h2>
-        <p className="text-krea-text-secondary text-xs uppercase tracking-[1.5px]">
-          {pedidos.length} {pedidos.length === 1 ? "pedido" : "pedidos"}
-        </p>
+        <Link
+          href="/dashboard/pedidos"
+          className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[1.5px] font-[family-name:var(--font-heading)] font-medium text-krea-text-secondary hover:text-krea-accent transition-colors border border-krea-border hover:border-krea-accent px-3 py-1.5"
+        >
+          Ver todos
+          <ArrowRight size={12} strokeWidth={1.5} />
+        </Link>
       </div>
+
+      {cancelMsg && (
+        <p
+          className={`text-xs mb-4 ${cancelMsg.includes("cancelado") ? "text-green-400" : "text-red-400"}`}
+        >
+          {cancelMsg}
+        </p>
+      )}
 
       {pedidos.length > 0 ? (
         <div className="bg-krea-bg-secondary border border-krea-border overflow-hidden">
@@ -37,14 +86,16 @@ export default function PedidosTab({ pedidos, moneda }: Props) {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-krea-border">
-                  {["Pedido", "Fecha", "Total", "Estado"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left p-4 font-[family-name:var(--font-heading)] uppercase tracking-[1.5px] text-[0.65rem] text-krea-text-secondary font-medium"
-                    >
-                      {h}
-                    </th>
-                  ))}
+                  {["Pedido", "Fecha", "Total", "Estado", "Acciones"].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        className="text-left p-4 font-[family-name:var(--font-heading)] uppercase tracking-[1.5px] text-[0.65rem] text-krea-text-secondary font-medium"
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -72,6 +123,25 @@ export default function PedidosTab({ pedidos, moneda }: Props) {
                       >
                         {p.estado?.charAt(0).toUpperCase() + p.estado?.slice(1)}
                       </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <OrderChat
+                          pedidoId={p.id}
+                          pedidoNumero={p.numero_pedido}
+                          triggerLabel="Chat"
+                        />
+                        {puedeCancelar(p) && (
+                          <button
+                            onClick={() => cancelar(p.id)}
+                            disabled={cancelando === p.id}
+                            className="inline-flex items-center gap-1 text-[0.6rem] uppercase tracking-[1.5px] font-[family-name:var(--font-heading)] text-red-400 hover:text-red-300 transition-colors border border-red-500/20 hover:border-red-400 px-2 py-1 bg-transparent cursor-pointer disabled:opacity-50"
+                          >
+                            <XCircle size={10} strokeWidth={1.5} />
+                            {cancelando === p.id ? "..." : "Cancelar"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

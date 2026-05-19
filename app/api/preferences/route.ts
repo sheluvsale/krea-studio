@@ -17,8 +17,8 @@ export async function GET() {
     if (!prefs) {
       await execute(
         `INSERT INTO preferencias_usuario
-         (usuario_id, notificaciones_email, notificaciones_push, newsletter, idioma, moneda, tema)
-         VALUES (?, true, false, false, 'es', 'DOP', 'dark')`,
+         (usuario_id, notificaciones_email, notificaciones_push, newsletter, idioma, moneda)
+         VALUES (?, true, false, false, 'es', 'DOP')`,
         [user.userId],
       );
       prefs = await queryOne(
@@ -51,7 +51,6 @@ export async function PUT(req: NextRequest) {
       newsletter,
       idioma,
       moneda,
-      tema,
     } = body;
 
     const existing = await queryOne(
@@ -62,8 +61,8 @@ export async function PUT(req: NextRequest) {
     if (!existing) {
       await execute(
         `INSERT INTO preferencias_usuario
-         (usuario_id, notificaciones_email, notificaciones_push, newsletter, idioma, moneda, tema)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (usuario_id, notificaciones_email, notificaciones_push, newsletter, idioma, moneda)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           user.userId,
           notificaciones_email ?? true,
@@ -71,7 +70,6 @@ export async function PUT(req: NextRequest) {
           newsletter ?? false,
           idioma ?? "es",
           moneda ?? "DOP",
-          tema ?? "dark",
         ],
       );
     } else {
@@ -82,7 +80,6 @@ export async function PUT(req: NextRequest) {
          newsletter = ?,
          idioma = ?,
          moneda = ?,
-         tema = ?,
          actualizado_en = CURRENT_TIMESTAMP
          WHERE usuario_id = ?`,
         [
@@ -91,7 +88,6 @@ export async function PUT(req: NextRequest) {
           newsletter ?? false,
           idioma ?? "es",
           moneda ?? "DOP",
-          tema ?? "dark",
           user.userId,
         ],
       );

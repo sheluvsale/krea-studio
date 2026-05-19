@@ -38,11 +38,20 @@ interface Resena {
   creado_en: string;
 }
 
+interface Seccion {
+  id: number;
+  tipo: string;
+  titulo: string;
+  contenido: string;
+  orden: number;
+}
+
 interface Props {
   producto: Producto;
   variantes: Variante[];
   imagenes: ImagenProd[];
   resenas: Resena[];
+  secciones: Seccion[];
   canReview: boolean;
   isLoggedIn: boolean;
   userRol: string;
@@ -53,6 +62,7 @@ export default function ProductDetailClient({
   variantes,
   imagenes,
   resenas: initialResenas,
+  secciones,
   canReview: initialCanReview,
   isLoggedIn,
   userRol,
@@ -241,9 +251,9 @@ export default function ProductDetailClient({
           </div>
 
           <div className="space-y-2 text-[#888] leading-relaxed">
-            {producto.descripcion?.split("\n").map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
+            {producto.descripcion
+              ?.split("\n")
+              .map((line, i) => <p key={i}>{line}</p>)}
           </div>
 
           {/* Size Selector */}
@@ -353,6 +363,76 @@ export default function ProductDetailClient({
           </div>
         </div>
       </div>
+
+      {/* Secciones personalizables */}
+      {secciones.length > 0 && (
+        <section className="max-w-[1200px] mx-auto px-[5%] py-16 border-t border-[#2a2a2a]">
+          <div className="space-y-12">
+            {secciones.map((sec) => (
+              <div
+                key={sec.id}
+                className="bg-[#141414] border border-[#2a2a2a] p-6 lg:p-8"
+              >
+                <h3 className="font-[family-name:var(--font-heading)] text-lg uppercase tracking-[2px] mb-4 pb-3 border-b border-[#2a2a2a]">
+                  {sec.titulo}
+                </h3>
+                {sec.tipo === "faq" ? (
+                  <div className="text-[#888] text-sm space-y-3 leading-relaxed whitespace-pre-line">
+                    {sec.contenido.split("\n").map((line, i) =>
+                      line.trim().startsWith("Q:") ||
+                      line.trim().startsWith("P:") ? (
+                        <p key={i} className="text-[#f5f5f5] font-medium mt-3">
+                          {line.trim()}
+                        </p>
+                      ) : line.trim().startsWith("A:") ||
+                        line.trim().startsWith("R:") ? (
+                        <p key={i} className="ml-4">
+                          {line.trim()}
+                        </p>
+                      ) : (
+                        <p key={i}>{line.trim()}</p>
+                      ),
+                    )}
+                  </div>
+                ) : sec.tipo === "galeria" ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {sec.contenido
+                      .split("\n")
+                      .filter((u) => u.trim())
+                      .map((url, i) => (
+                        <img
+                          key={i}
+                          src={url.trim()}
+                          alt=""
+                          className="w-full aspect-square object-cover border border-[#2a2a2a]"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
+                          }}
+                        />
+                      ))}
+                  </div>
+                ) : sec.tipo === "video" ? (
+                  <div className="aspect-video bg-[#0a0a0a] border border-[#2a2a2a] flex items-center justify-center">
+                    <a
+                      href={sec.contenido.trim()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#3b82f6] hover:underline text-sm"
+                    >
+                      Ver video →
+                    </a>
+                  </div>
+                ) : (
+                  <div className="text-[#888] text-sm leading-relaxed whitespace-pre-line">
+                    {sec.contenido}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Reviews */}
       <section className="max-w-[1200px] mx-auto px-[5%] py-16 border-t border-[#2a2a2a]">

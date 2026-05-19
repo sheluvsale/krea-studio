@@ -54,8 +54,15 @@ export default function ContactoPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setStatus("success");
-        setForm({ nombre: "", email: "", asunto: "", mensaje: "" });
+        if (data.emailDelivered === false) {
+          setStatus("error");
+          setErrorMsg(
+            "Tu mensaje fue guardado, pero no se pudo enviar el correo de confirmación. Inténtalo más tarde o contáctanos directamente.",
+          );
+        } else {
+          setStatus("success");
+          setForm({ nombre: "", email: "", asunto: "", mensaje: "" });
+        }
       } else {
         setStatus("error");
         setErrorMsg(data.error || "Error al enviar.");

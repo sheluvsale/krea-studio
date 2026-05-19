@@ -11,7 +11,7 @@ export default async function ProductoDetallePage({
 }) {
   const { slug } = await params;
 
-  const { producto, variantes, imagenes, resenas } =
+  const { producto, variantes, imagenes, resenas, secciones } =
     await getProductBySlug(slug);
 
   if (!producto) {
@@ -45,6 +45,11 @@ export default async function ProductoDetallePage({
         resenas as unknown as React.ComponentProps<
           typeof ProductDetailClient
         >["resenas"]
+      }
+      secciones={
+        secciones as unknown as React.ComponentProps<
+          typeof ProductDetailClient
+        >["secciones"]
       }
       canReview={canReview}
       isLoggedIn={!!user?.userId}

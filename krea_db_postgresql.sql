@@ -161,7 +161,8 @@ CREATE TABLE pedidos (
 CREATE TABLE items_pedido (
     id SERIAL PRIMARY KEY,
     pedido_id INTEGER NOT NULL,
-    variante_id INTEGER NOT NULL,
+    producto_id INTEGER NOT NULL,
+    variante_id INTEGER DEFAULT NULL,
     vendedor_id INTEGER NOT NULL,
     nombre_producto VARCHAR(255) NOT NULL,
     cantidad INTEGER NOT NULL CHECK (cantidad > 0),
@@ -201,6 +202,7 @@ CREATE TABLE carrito (
     id SERIAL PRIMARY KEY,
     usuario_id INTEGER NOT NULL,
     producto_id INTEGER NOT NULL,
+    variante_id INTEGER DEFAULT NULL,
     nombre_producto VARCHAR(255) NOT NULL,
     cantidad INTEGER NOT NULL DEFAULT 1,
     precio_unitario DECIMAL(10,2) NOT NULL,
@@ -669,3 +671,110 @@ SELECT setval('configuracion_sistema_id_seq', (SELECT MAX(id) FROM configuracion
 SELECT setval('metodos_pago_config_id_seq', (SELECT MAX(id) FROM metodos_pago_config));
 SELECT setval('password_resets_id_seq', (SELECT MAX(id) FROM password_resets));
 SELECT setval('"reseñas_id_seq"', (SELECT MAX(id) FROM "reseñas"));
+
+-- ============================================
+-- 9. CHAT SYSTEM TABLES (added 2026-05-18)
+-- ============================================
+CREATE TYPE IF NOT EXISTS chat_tipo_conversacion AS ENUM ('pedido', 'soporte');
+CREATE TYPE IF NOT EXISTS chat_estado_conversacion AS ENUM ('abierta', 'cerrada', 'archivada');
+CREATE TYPE IF NOT EXISTS chat_estado_mensaje AS ENUM ('enviado', 'entregado', 'leido', 'fallido');
+CREATE TYPE IF NOT EXISTS chat_rol_participante AS ENUM ('cliente', 'vendedor', 'soporte');
+
+CREATE TABLE IF NOT EXISTS conversaciones (
+    id SERIAL PRIMARY KEY,
+    pedido_id INTEGER DEFAULT NULL,
+    tipo chat_tipo_conversacion NOT NULL DEFAULT 'soporte',
+    estado chat_estado_conversacion NOT NULL DEFAULT 'abierta',
+    asunto VARCHAR(255) DEFAULT NULL,
+    creado_por INTEGER NOT NULL,
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP DEFAULT NULL,
+    ultimo_mensaje_en TIMESTAMP DEFAULT NULL,
+    ultimo_mensaje_preview VARCHAR(200) DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS participantes_conversacion (
+    id SERIAL PRIMARY KEY,
+    conversacion_id INTEGER NOT NULL,
+    usuario_id INTEGER NOT NULL,
+    rol chat_rol_participante NOT NULL DEFAULT 'cliente',
+    notificaciones_email BOOLEAN NOT NULL DEFAULT TRUE,
+    notificaciones_push BOOLEAN NOT NULL DEFAULT TRUE,
+    silenciado BOOLEAN NOT NULL DEFAULT FALSE,
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS mensajes_chat (
+    id SERIAL PRIMARY KEY,
+    conversacion_id INTEGER NOT NULL,
+    remitente_id INTEGER NOT NULL,
+    contenido TEXT NOT NULL,
+    tipo VARCHAR(20) NOT NULL DEFAULT 'texto',
+    estado chat_estado_mensaje NOT NULL DEFAULT 'enviado',
+    metadata JSON DEFAULT NULL,
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP DEFAULT NULL,
+    leido_en TIMESTAMP DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mensajes_no_leidos (
+    id SERIAL PRIMARY KEY,
+    conversacion_id INTEGER NOT NULL,
+    usuario_id INTEGER NOT NULL,
+    cantidad INTEGER NOT NULL DEFAULT 0,
+    ultimo_mensaje_id INTEGER DEFAULT NULL,
+    actualizado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_conversaciones_pedido_id ON conversaciones(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_conversaciones_estado ON conversaciones(estado);
+CREATE INDEX IF NOT EXISTS idx_conversaciones_creado_en ON conversaciones(creado_en DESC);
+CREATE INDEX IF NOT EXISTS idx_conversaciones_ultimo_mensaje ON conversaciones(ultimo_mensaje_en DESC);
+CREATE INDEX IF NOT EXISTS idx_participantes_conversacion_id ON participantes_conversacion(conversacion_id);
+CREATE INDEX IF NOT EXISTS idx_participantes_usuario_id ON participantes_conversacion(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_mensajes_conversacion_id ON mensajes_chat(conversacion_id);
+CREATE INDEX IF NOT EXISTS idx_mensajes_remitente_id ON mensajes_chat(remitente_id);
+CREATE INDEX IF NOT EXISTS idx_mensajes_creado_en ON mensajes_chat(creado_en DESC);
+CREATE INDEX IF NOT EXISTS idx_mensajes_no_leidos_usuario ON mensajes_no_leidos(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_mensajes_no_leidos_conversacion ON mensajes_no_leidos(conversacion_id);
+
+-- Foreign Keys
+ALTER TABLE conversaciones ADD CONSTRAINT IF NOT EXISTS conversaciones_pedido_fk FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE SET NULL;
+ALTER TABLE participantes_conversacion ADD CONSTRAINT IF NOT EXISTS participantes_conversacion_fk FOREIGN KEY (conversacion_id) REFERENCES conversaciones(id) ON DELETE CASCADE;
+ALTER TABLE participantes_conversacion ADD CONSTRAINT IF NOT EXISTS participantes_usuario_fk FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE;
+ALTER TABLE mensajes_chat ADD CONSTRAINT IF NOT EXISTS mensajes_conversacion_fk FOREIGN KEY (conversacion_id) REFERENCES conversaciones(id) ON DELETE CASCADE;
+ALTER TABLE mensajes_chat ADD CONSTRAINT IF NOT EXISTS mensajes_remitente_fk FOREIGN KEY (remitente_id) REFERENCES usuarios(id) ON DELETE CASCADE;
+ALTER TABLE mensajes_no_leidos ADD CONSTRAINT IF NOT EXISTS no_leidos_conversacion_fk FOREIGN KEY (conversacion_id) REFERENCES conversaciones(id) ON DELETE CASCADE;
+ALTER TABLE mensajes_no_leidos ADD CONSTRAINT IF NOT EXISTS no_leidos_usuario_fk FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE;
+
+-- Triggers
+DROP TRIGGER IF EXISTS trg_conversaciones_updated ON conversaciones;
+CREATE TRIGGER trg_conversaciones_updated BEFORE UPDATE ON conversaciones FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+DROP TRIGGER IF EXISTS trg_mensajes_chat_updated ON mensajes_chat;
+CREATE TRIGGER trg_mensajes_chat_updated BEFORE UPDATE ON mensajes_chat FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- Unique constraints
+ALTER TABLE participantes_conversacion ADD CONSTRAINT IF NOT EXISTS participantes_unico UNIQUE (conversacion_id, usuario_id);
+ALTER TABLE mensajes_no_leidos ADD CONSTRAINT IF NOT EXISTS no_leidos_unico UNIQUE (conversacion_id, usuario_id);
+
+-- ============================================================
+-- 10. HISTORIAL ESTADOS PEDIDO
+-- ============================================================
+CREATE TABLE IF NOT EXISTS historial_estados_pedido (
+    id SERIAL PRIMARY KEY,
+    pedido_id INTEGER NOT NULL,
+    estado_anterior VARCHAR(50) NOT NULL,
+    estado_nuevo VARCHAR(50) NOT NULL,
+    justificacion TEXT NOT NULL,
+    cambiado_por INTEGER NOT NULL,
+    origen VARCHAR(20) NOT NULL DEFAULT 'admin' CHECK (origen IN ('admin', 'cliente', 'sistema')),
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_historial_pedido_id ON historial_estados_pedido(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_historial_creado_en ON historial_estados_pedido(creado_en);
+
+ALTER TABLE historial_estados_pedido ADD CONSTRAINT IF NOT EXISTS historial_pedido_fk FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE;
+ALTER TABLE historial_estados_pedido ADD CONSTRAINT IF NOT EXISTS historial_usuario_fk FOREIGN KEY (cambiado_por) REFERENCES usuarios(id) ON DELETE SET NULL;

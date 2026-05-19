@@ -126,6 +126,7 @@ export async function getProductBySlug(slug: string): Promise<{
   variantes: Record<string, unknown>[];
   imagenes: Record<string, unknown>[];
   resenas: Record<string, unknown>[];
+  secciones: Record<string, unknown>[];
 }> {
   const producto = await queryOne(
     `SELECT p.*, c.nombre as categoria_nombre, m.nombre as marca_nombre
@@ -137,7 +138,13 @@ export async function getProductBySlug(slug: string): Promise<{
   );
 
   if (!producto) {
-    return { producto: null, variantes: [], imagenes: [], resenas: [] };
+    return {
+      producto: null,
+      variantes: [],
+      imagenes: [],
+      resenas: [],
+      secciones: [],
+    };
   }
 
   const productoId = (producto as Record<string, unknown>).id as number;
@@ -160,10 +167,19 @@ export async function getProductBySlug(slug: string): Promise<{
     [productoId],
   );
 
+  const secciones = await query(
+    `SELECT id, tipo, titulo, contenido, orden
+     FROM producto_secciones
+     WHERE producto_id = ? AND activo = true
+     ORDER BY orden ASC, creado_en DESC`,
+    [productoId],
+  );
+
   return {
     producto: producto as Record<string, unknown>,
     variantes,
     imagenes,
     resenas,
+    secciones: secciones || [],
   };
 }

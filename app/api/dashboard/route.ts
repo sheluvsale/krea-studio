@@ -15,7 +15,7 @@ export async function GET() {
     );
 
     const pedidos = await query(
-      "SELECT * FROM pedidos WHERE cliente_id = ? ORDER BY creado_en DESC LIMIT 5",
+      "SELECT * FROM pedidos WHERE cliente_id = ? ORDER BY creado_en DESC LIMIT 3",
       [user.userId],
     );
 
@@ -32,7 +32,7 @@ export async function GET() {
     );
 
     const preferencias = await queryOne(
-      `SELECT notificaciones_email, notificaciones_push, newsletter, idioma, moneda, tema
+      `SELECT notificaciones_email, notificaciones_push, newsletter, idioma, moneda
        FROM preferencias_usuario WHERE usuario_id = ?`,
       [user.userId],
     );
@@ -54,7 +54,6 @@ export async function GET() {
         newsletter: false,
         idioma: "es",
         moneda: "DOP",
-        tema: "dark",
       },
     };
 

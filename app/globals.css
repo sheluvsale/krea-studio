@@ -1,34 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f5f5;
-  --foreground: #0a0a0a;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --surface: #ffffff;
-  --surface-2: #f0f0f0;
-  --surface-3: #e5e5e5;
-  --border: #d4d4d4;
-  --text-dim: #666;
-  --danger: #ef4444;
-  --krea-bg: #f5f5f5;
-  --krea-bg-secondary: #ffffff;
-  --krea-bg-tertiary: #f0f0f0;
-  --krea-text-primary: #0a0a0a;
-  --krea-text-secondary: #555555;
-  --krea-border: #d4d4d4;
-  --krea-accent: #0a0a0a;
-  --krea-accent-hover: #333333;
-  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
   --surface: #141414;
   --surface-2: #1a1a1a;
   --surface-3: #222;
   --border: #2a2a2a;
+  --text-dim: #888;
+  --danger: #ef4444;
   --krea-bg: #0a0a0a;
   --krea-bg-secondary: #141414;
   --krea-bg-tertiary: #1a1a1a;
@@ -37,6 +19,7 @@
   --krea-border: #2a2a2a;
   --krea-accent: #ffffff;
   --krea-accent-hover: #d4d4d4;
+  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 @theme inline {

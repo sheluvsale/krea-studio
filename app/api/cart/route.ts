@@ -10,7 +10,7 @@ export async function GET() {
 
   try {
     const items = await query(
-      `SELECT c.id, c.usuario_id, c.producto_id, c.nombre_producto as nombre, c.cantidad,
+      `SELECT c.id, c.usuario_id, c.producto_id, c.variante_id, c.nombre_producto as nombre, c.cantidad,
               c.precio_unitario as precio_base, c.talla,
               p.slug, p.descripcion,
               (SELECT url_imagen FROM imagenes_producto WHERE producto_id = p.id ORDER BY es_principal DESC LIMIT 1) as imagen
@@ -49,13 +49,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { producto_id, cantidad, talla } = body;
+    const { producto_id, cantidad, talla, variante_id } = body;
 
     console.log("Cart POST request:", {
       userId: user.userId,
       producto_id,
       cantidad,
       talla,
+      variante_id,
     });
 
     if (!producto_id) {
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     const producto = await queryOne(
-      "SELECT nombre, precio_base FROM productos WHERE id = ?",
+      "SELECT nombre, precio_base, vendedor_id FROM productos WHERE id = ?",
       [producto_id],
     );
 
@@ -85,8 +86,37 @@ export async function POST(req: NextRequest) {
     const qty = cantidad || 1;
     const tallaValor = talla || null;
 
+    // Resolver variante_id
+    let resolvedVarianteId = variante_id ? Number(variante_id) : null;
+    if (!resolvedVarianteId && tallaValor) {
+      const variante = await queryOne(
+        "SELECT id FROM variantes_producto WHERE producto_id = ? AND sku ILIKE ? LIMIT 1",
+        [producto_id, `%${tallaValor}%`],
+      );
+      if (variante) {
+        resolvedVarianteId = Number((variante as Record<string, unknown>).id);
+      }
+    }
+    if (!resolvedVarianteId) {
+      // Fallback: primera variante del producto
+      const primeraVariante = await queryOne(
+        "SELECT id FROM variantes_producto WHERE producto_id = ? LIMIT 1",
+        [producto_id],
+      );
+      if (primeraVariante) {
+        resolvedVarianteId = Number(
+          (primeraVariante as Record<string, unknown>).id,
+        );
+      }
+    }
+
     let existing = null;
-    if (tallaValor) {
+    if (resolvedVarianteId) {
+      existing = await queryOne(
+        "SELECT id, cantidad FROM carrito WHERE usuario_id = ? AND variante_id = ?",
+        [user.userId, resolvedVarianteId],
+      );
+    } else if (tallaValor) {
       existing = await queryOne(
         "SELECT id, cantidad FROM carrito WHERE usuario_id = ? AND producto_id = ? AND talla = ?",
         [user.userId, producto_id, tallaValor],
@@ -107,10 +137,11 @@ export async function POST(req: NextRequest) {
       console.log("Cart POST: Updated existing item");
     } else {
       await execute(
-        "INSERT INTO carrito (usuario_id, producto_id, nombre_producto, cantidad, precio_unitario, talla) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO carrito (usuario_id, producto_id, variante_id, nombre_producto, cantidad, precio_unitario, talla) VALUES (?, ?, ?, ?, ?, ?, ?)",
         [
           user.userId,
           producto_id,
+          resolvedVarianteId,
           nombreProducto,
           qty,
           precioUnitario,

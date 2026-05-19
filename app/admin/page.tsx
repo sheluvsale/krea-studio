@@ -25,6 +25,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import MobileWarning from "@/components/MobileWarning";
+import OrderChat from "../../components/OrderChat";
 
 interface AdminData {
   nombre: string;
@@ -725,6 +726,14 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
   });
   const [imagenes, setImagenes] = useState<Record<string, unknown>[]>([]);
   const [loadingImagenes, setLoadingImagenes] = useState(false);
+  const [secciones, setSecciones] = useState<Record<string, unknown>[]>([]);
+  const [loadingSecciones, setLoadingSecciones] = useState(false);
+  const [nuevaSeccion, setNuevaSeccion] = useState({
+    tipo: "texto_libre" as string,
+    titulo: "" as string,
+    contenido: "" as string,
+    orden: 0 as number,
+  });
 
   const filteredProductos = React.useMemo(() => {
     return productos.filter(
@@ -778,6 +787,9 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
     } finally {
       setLoadingImagenes(false);
     }
+
+    // Cargar secciones del producto
+    await fetchSecciones(Number(p.id));
   };
 
   const saveEdit = async (e: React.FormEvent) => {
@@ -873,6 +885,82 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
     } catch (error) {
       console.error("Error setting principal image:", error);
     }
+  };
+
+  // ── Secciones personalizables ──
+  const fetchSecciones = async (productoId: number) => {
+    setLoadingSecciones(true);
+    try {
+      const res = await fetch(
+        `/api/admin/product-sections?producto_id=${productoId}`,
+      );
+      const data = await res.json();
+      setSecciones(data.secciones || []);
+    } catch (error) {
+      console.error("Error loading sections:", error);
+      setSecciones([]);
+    } finally {
+      setLoadingSecciones(false);
+    }
+  };
+
+  const agregarSeccion = async () => {
+    if (!editing?.id || !nuevaSeccion.titulo.trim()) return;
+    try {
+      await fetch("/api/admin/product-sections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          producto_id: editing.id,
+          tipo: nuevaSeccion.tipo,
+          titulo: nuevaSeccion.titulo.trim(),
+          contenido: nuevaSeccion.contenido.trim(),
+          orden: Number(nuevaSeccion.orden) || 0,
+          activo: true,
+        }),
+      });
+      setNuevaSeccion({
+        tipo: "texto_libre",
+        titulo: "",
+        contenido: "",
+        orden: 0,
+      });
+      await fetchSecciones(Number(editing.id));
+    } catch (error) {
+      console.error("Error adding section:", error);
+    }
+  };
+
+  const actualizarSeccion = async (
+    id: number,
+    cambios: Partial<Record<string, unknown>>,
+  ) => {
+    try {
+      await fetch("/api/admin/product-sections", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...cambios }),
+      });
+      if (editing?.id) await fetchSecciones(Number(editing.id));
+    } catch (error) {
+      console.error("Error updating section:", error);
+    }
+  };
+
+  const eliminarSeccion = async (id: number) => {
+    try {
+      await fetch(`/api/admin/product-sections?id=${id}`, { method: "DELETE" });
+      if (editing?.id) await fetchSecciones(Number(editing.id));
+    } catch (error) {
+      console.error("Error deleting section:", error);
+    }
+  };
+
+  const cambiarOrdenSeccion = async (id: number, delta: number) => {
+    const idx = secciones.findIndex((s) => Number(s.id) === id);
+    if (idx < 0) return;
+    const nuevaOrden = (Number(secciones[idx].orden) || 0) + delta;
+    await actualizarSeccion(id, { orden: nuevaOrden });
   };
 
   if (loading) return <p className="text-[#888]">Cargando productos...</p>;
@@ -1144,6 +1232,168 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
                 )}
               </div>
 
+              {/* Secciones personalizables */}
+              <div className="mt-6 pt-6 border-t border-[#1f1f1f]">
+                <label className="block text-xs text-[#888] uppercase tracking-[1.5px] mb-3 font-[family-name:var(--font-heading)]">
+                  Secciones / Bloques del Producto
+                </label>
+                {loadingSecciones ? (
+                  <p className="text-[#888] text-sm">Cargando secciones...</p>
+                ) : (
+                  <div className="space-y-3">
+                    {secciones.map((s) => (
+                      <div
+                        key={String(s.id)}
+                        className="bg-[#1a1a1a] border border-[#1f1f1f] p-3 rounded-lg"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase tracking-[1px] text-[#888] bg-[#0f0f0f] px-2 py-1 rounded">
+                              {String(s.tipo)}
+                            </span>
+                            <span className="text-xs font-medium text-[#f5f5f5]">
+                              {String(s.titulo)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() =>
+                                cambiarOrdenSeccion(Number(s.id), -1)
+                              }
+                              className="p-1 text-[#888] hover:text-white bg-transparent border-none cursor-pointer"
+                              title="Subir"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              onClick={() =>
+                                cambiarOrdenSeccion(Number(s.id), 1)
+                              }
+                              className="p-1 text-[#888] hover:text-white bg-transparent border-none cursor-pointer"
+                              title="Bajar"
+                            >
+                              ↓
+                            </button>
+                            <button
+                              onClick={() => eliminarSeccion(Number(s.id))}
+                              className="p-1 text-red-400 hover:text-red-300 bg-transparent border-none cursor-pointer"
+                              title="Eliminar"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                        <textarea
+                          value={String(s.contenido || "")}
+                          onChange={(e) =>
+                            actualizarSeccion(Number(s.id), {
+                              contenido: e.target.value,
+                            })
+                          }
+                          rows={2}
+                          className="w-full px-3 py-2 bg-[#0f0f0f] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888] resize-none"
+                        />
+                        <div className="flex items-center gap-2 mt-2">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(s.activo)}
+                            onChange={(e) =>
+                              actualizarSeccion(Number(s.id), {
+                                activo: e.target.checked,
+                              })
+                            }
+                            id={`activo-${s.id}`}
+                            className="accent-[#3b82f6]"
+                          />
+                          <label
+                            htmlFor={`activo-${s.id}`}
+                            className="text-xs text-[#888]"
+                          >
+                            Activo
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Nueva sección */}
+                    <div className="bg-[#1a1a1a] border border-[#1f1f1f] p-3 rounded-lg">
+                      <p className="text-xs uppercase tracking-[1.5px] text-[#888] font-[family-name:var(--font-heading)] mb-2">
+                        Nueva sección
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <select
+                          value={nuevaSeccion.tipo}
+                          onChange={(e) =>
+                            setNuevaSeccion({
+                              ...nuevaSeccion,
+                              tipo: e.target.value,
+                            })
+                          }
+                          className="px-3 py-2 bg-[#0f0f0f] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888] cursor-pointer"
+                        >
+                          {[
+                            "especificaciones",
+                            "materiales",
+                            "cuidado",
+                            "faq",
+                            "galeria",
+                            "video",
+                            "texto_libre",
+                          ].map((t) => (
+                            <option key={t} value={t}>
+                              {t.replace("_", " ")}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          placeholder="Orden"
+                          value={nuevaSeccion.orden}
+                          onChange={(e) =>
+                            setNuevaSeccion({
+                              ...nuevaSeccion,
+                              orden: Number(e.target.value) || 0,
+                            })
+                          }
+                          className="px-3 py-2 bg-[#0f0f0f] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888]"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Título"
+                        value={nuevaSeccion.titulo}
+                        onChange={(e) =>
+                          setNuevaSeccion({
+                            ...nuevaSeccion,
+                            titulo: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 bg-[#0f0f0f] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888] mb-2"
+                      />
+                      <textarea
+                        placeholder="Contenido"
+                        value={nuevaSeccion.contenido}
+                        onChange={(e) =>
+                          setNuevaSeccion({
+                            ...nuevaSeccion,
+                            contenido: e.target.value,
+                          })
+                        }
+                        rows={2}
+                        className="w-full px-3 py-2 bg-[#0f0f0f] border border-[#1f1f1f] text-[#f5f5f5] text-sm focus:outline-none focus:border-[#888] resize-none mb-2"
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarSeccion}
+                        className="w-full px-4 py-2 bg-[#3b82f6] text-white text-sm rounded-lg hover:bg-[#60a5fa] transition-colors border-none cursor-pointer"
+                      >
+                        Agregar Sección
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2 mt-6">
                 <button
                   type="submit"
@@ -1266,6 +1516,24 @@ function AdminProductos({ searchQuery }: { searchQuery: string }) {
 function AdminPedidos({ searchQuery }: { searchQuery: string }) {
   const [pedidos, setPedidos] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+  const [justificacionModal, setJustificacionModal] = useState<{
+    open: boolean;
+    pedidoId: number;
+    nuevoEstado: string;
+    justificacion: string;
+    error: string;
+  }>({
+    open: false,
+    pedidoId: 0,
+    nuevoEstado: "",
+    justificacion: "",
+    error: "",
+  });
+  const [historialModal, setHistorialModal] = useState<{
+    open: boolean;
+    pedidoId: number;
+    historial: Record<string, unknown>[];
+  }>({ open: false, pedidoId: 0, historial: [] });
 
   const filteredPedidos = React.useMemo(() => {
     return pedidos.filter(
@@ -1291,24 +1559,116 @@ function AdminPedidos({ searchQuery }: { searchQuery: string }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const updateStatus = async (id: number, estado: string) => {
-    await fetch("/api/admin/orders", {
+  const openJustificacion = (id: number, estado: string) => {
+    setJustificacionModal({
+      open: true,
+      pedidoId: id,
+      nuevoEstado: estado,
+      justificacion: "",
+      error: "",
+    });
+  };
+
+  const submitJustificacion = async () => {
+    const { pedidoId, nuevoEstado, justificacion } = justificacionModal;
+    if (!justificacion.trim() || justificacion.trim().length < 5) {
+      setJustificacionModal((prev) => ({
+        ...prev,
+        error: "La justificación debe tener al menos 5 caracteres.",
+      }));
+      return;
+    }
+
+    const res = await fetch("/api/admin/orders", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, estado }),
+      body: JSON.stringify({
+        id: pedidoId,
+        estado: nuevoEstado,
+        justificacion: justificacion.trim(),
+      }),
     });
-    const res = await fetch("/api/admin/orders");
-    const data = await res.json();
+
+    if (!res.ok) {
+      const data = await res.json();
+      setJustificacionModal((prev) => ({
+        ...prev,
+        error: data.error || "Error al actualizar.",
+      }));
+      return;
+    }
+
+    setJustificacionModal({
+      open: false,
+      pedidoId: 0,
+      nuevoEstado: "",
+      justificacion: "",
+      error: "",
+    });
+    const refresh = await fetch("/api/admin/orders");
+    const data = await refresh.json();
     setPedidos(data.pedidos || []);
+  };
+
+  const verHistorial = async (pedidoId: number) => {
+    const res = await fetch(`/api/pedidos/historial?pedido_id=${pedidoId}`);
+    const data = await res.json();
+    setHistorialModal({
+      open: true,
+      pedidoId,
+      historial: data.historial || [],
+    });
+  };
+
+  const limpiarChatsInactivos = async () => {
+    const res = await fetch("/api/chat/cleanup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manual: false }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`Chats inactivos eliminados: ${data.eliminados || 0}`);
+    } else {
+      alert(data.error || "Error al limpiar chats.");
+    }
+  };
+
+  const borrarChatPedido = async (pedidoId: number) => {
+    if (
+      !confirm(
+        "¿Eliminar el chat de este pedido? Esta acción no se puede deshacer.",
+      )
+    )
+      return;
+    const res = await fetch("/api/chat/cleanup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manual: true, pedido_id: pedidoId }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert("Chat eliminado.");
+    } else {
+      alert(data.error || "Error al eliminar chat.");
+    }
   };
 
   if (loading) return <p className="text-[#888]">Cargando pedidos...</p>;
 
   return (
     <div>
-      <h2 className="font-[family-name:var(--font-heading)] text-xl font-semibold mb-4">
-        Gestión de Pedidos
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-[family-name:var(--font-heading)] text-xl font-semibold">
+          Gestión de Pedidos
+        </h2>
+        <button
+          onClick={limpiarChatsInactivos}
+          className="text-[0.6rem] uppercase tracking-[1.5px] font-[family-name:var(--font-heading)] text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-400 px-3 py-1.5 bg-transparent cursor-pointer"
+        >
+          Limpiar Chats Inactivos (+24h)
+        </button>
+      </div>
       {pedidos.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
@@ -1321,6 +1681,7 @@ function AdminPedidos({ searchQuery }: { searchQuery: string }) {
                   "Estado",
                   "Fecha",
                   "Acción",
+                  "Chat",
                 ].map((h) => (
                   <th
                     key={h}
@@ -1344,25 +1705,52 @@ function AdminPedidos({ searchQuery }: { searchQuery: string }) {
                     {new Date(String(p.creado_en)).toLocaleDateString("es-MX")}
                   </td>
                   <td className="p-3">
-                    <select
-                      value={String(p.estado)}
-                      onChange={(e) =>
-                        updateStatus(Number(p.id), e.target.value)
-                      }
-                      className="bg-[#1a1a1a] text-[#f5f5f5] border border-[#1f1f1f] px-2 py-1 text-xs cursor-pointer"
-                    >
-                      {[
-                        "pendiente",
-                        "procesando",
-                        "enviado",
-                        "entregado",
-                        "cancelado",
-                      ].map((e) => (
-                        <option key={e} value={e}>
-                          {e.charAt(0).toUpperCase() + e.slice(1)}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={String(p.estado)}
+                        onChange={(e) => {
+                          if (e.target.value !== String(p.estado)) {
+                            openJustificacion(Number(p.id), e.target.value);
+                          }
+                        }}
+                        className="bg-[#1a1a1a] text-[#f5f5f5] border border-[#1f1f1f] px-2 py-1 text-xs cursor-pointer"
+                      >
+                        {[
+                          "pendiente",
+                          "procesando",
+                          "enviado",
+                          "entregado",
+                          "cancelado",
+                        ].map((e) => (
+                          <option key={e} value={e}>
+                            {e.charAt(0).toUpperCase() + e.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => verHistorial(Number(p.id))}
+                        className="text-[#888] hover:text-[#f5f5f5] text-xs bg-transparent border-none cursor-pointer underline"
+                        title="Ver historial"
+                      >
+                        Historial
+                      </button>
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-2">
+                      <OrderChat
+                        pedidoId={Number(p.id)}
+                        pedidoNumero={String(p.numero_pedido)}
+                        triggerLabel="Chat"
+                      />
+                      <button
+                        onClick={() => borrarChatPedido(Number(p.id))}
+                        className="text-[#555] hover:text-red-400 text-[0.6rem] uppercase tracking-[1px] bg-transparent border-none cursor-pointer"
+                        title="Eliminar chat"
+                      >
+                        Borrar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1373,6 +1761,141 @@ function AdminPedidos({ searchQuery }: { searchQuery: string }) {
         <p className="text-[#888]">
           {searchQuery ? "No se encontraron resultados." : "No hay pedidos."}
         </p>
+      )}
+
+      {/* Modal Justificación */}
+      {justificacionModal.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() =>
+              setJustificacionModal({
+                open: false,
+                pedidoId: 0,
+                nuevoEstado: "",
+                justificacion: "",
+                error: "",
+              })
+            }
+          />
+          <div className="relative bg-[#141414] border border-[#2a2a2a] p-6 w-full max-w-md">
+            <h3 className="font-[family-name:var(--font-heading)] text-lg mb-1">
+              Cambiar Estado
+            </h3>
+            <p className="text-[#888] text-sm mb-4">
+              Nuevo estado:{" "}
+              <strong className="text-[#f5f5f5]">
+                {justificacionModal.nuevoEstado}
+              </strong>
+            </p>
+            <label className="block text-xs uppercase tracking-[1.5px] text-[#888] font-[family-name:var(--font-heading)] mb-2">
+              Justificación *
+            </label>
+            <textarea
+              value={justificacionModal.justificacion}
+              onChange={(e) =>
+                setJustificacionModal((prev) => ({
+                  ...prev,
+                  justificacion: e.target.value,
+                  error: "",
+                }))
+              }
+              placeholder="Describe el motivo del cambio..."
+              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#f5f5f5] text-sm p-3 focus:outline-none focus:border-[#888] resize-none h-24 mb-2"
+            />
+            {justificacionModal.error && (
+              <p className="text-red-400 text-xs mb-3">
+                {justificacionModal.error}
+              </p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() =>
+                  setJustificacionModal({
+                    open: false,
+                    pedidoId: 0,
+                    nuevoEstado: "",
+                    justificacion: "",
+                    error: "",
+                  })
+                }
+                className="px-4 py-2 text-xs uppercase tracking-[1.5px] font-[family-name:var(--font-heading)] text-[#888] hover:text-[#f5f5f5] bg-transparent border border-[#2a2a2a] cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={submitJustificacion}
+                className="px-4 py-2 text-xs uppercase tracking-[1.5px] font-[family-name:var(--font-heading)] bg-[#ffffff] text-[#0a0a0a] hover:bg-[#d4d4d4] border-none cursor-pointer"
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Historial */}
+      {historialModal.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() =>
+              setHistorialModal({ open: false, pedidoId: 0, historial: [] })
+            }
+          />
+          <div className="relative bg-[#141414] border border-[#2a2a2a] p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+            <h3 className="font-[family-name:var(--font-heading)] text-lg mb-4">
+              Historial de Cambios
+            </h3>
+            {historialModal.historial.length === 0 ? (
+              <p className="text-[#888] text-sm">No hay cambios registrados.</p>
+            ) : (
+              <div className="space-y-3">
+                {historialModal.historial.map((h) => (
+                  <div
+                    key={String(h.id)}
+                    className="bg-[#1a1a1a] border border-[#2a2a2a] p-3"
+                  >
+                    <div className="flex items-center gap-2 text-xs mb-1">
+                      <span className="text-[#888]">
+                        {String(h.estado_anterior)}
+                      </span>
+                      <span>→</span>
+                      <span className="text-[#f5f5f5] font-medium">
+                        {String(h.estado_nuevo)}
+                      </span>
+                      <span className="text-[#555] ml-auto">
+                        {h.creado_en
+                          ? new Date(String(h.creado_en)).toLocaleString(
+                              "es-MX",
+                            )
+                          : ""}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#ccc]">
+                      {String(h.justificacion)}
+                    </p>
+                    <p className="text-[10px] text-[#555] mt-1 uppercase tracking-[1px]">
+                      Por: {String(h.cambiado_por_nombre || "")}{" "}
+                      {String(h.cambiado_por_apellido || "")} ·{" "}
+                      {String(h.origen || "")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 text-right">
+              <button
+                onClick={() =>
+                  setHistorialModal({ open: false, pedidoId: 0, historial: [] })
+                }
+                className="px-4 py-2 text-xs uppercase tracking-[1.5px] font-[family-name:var(--font-heading)] text-[#888] hover:text-[#f5f5f5] bg-transparent border border-[#2a2a2a] cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
